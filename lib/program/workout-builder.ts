@@ -1,5 +1,5 @@
 import { getMainSets, getBBBSets } from './calculator'
-import { BBB_LIFT, ACCESSORIES, LIFT_LABELS, type Lift, type AnyLift } from './constants'
+import { BBB_LIFT, ACCESSORY_GROUPS, LIFT_LABELS, type Lift, type AnyLift } from './constants'
 
 export type PlannedSet = {
   exercise: string
@@ -9,6 +9,8 @@ export type PlannedSet = {
   plannedWeight: number | null
   isAmrap: boolean
   isAccessory: boolean
+  supersetGroupId: number | null
+  supersetRole: 'a' | 'b' | null
 }
 
 export function buildWorkoutPlan(
@@ -18,6 +20,7 @@ export function buildWorkoutPlan(
 ): PlannedSet[] {
   const sets: PlannedSet[] = []
 
+  // Main lift sets
   getMainSets(tms[dayType], weekNumber).forEach((s, i) => {
     sets.push({
       exercise: dayType,
@@ -27,9 +30,12 @@ export function buildWorkoutPlan(
       plannedWeight: s.plannedWeight,
       isAmrap: s.isAmrap,
       isAccessory: false,
+      supersetGroupId: null,
+      supersetRole: null,
     })
   })
 
+  // BBB sets
   const bbbLift = BBB_LIFT[dayType]
   const bbbTm = bbbLift === 'rdl' ? tms['deadlift'] : (tms[bbbLift] ?? tms[dayType])
   getBBBSets(bbbTm).forEach((s, i) => {
@@ -41,20 +47,62 @@ export function buildWorkoutPlan(
       plannedWeight: s.plannedWeight,
       isAmrap: false,
       isAccessory: false,
+      supersetGroupId: null,
+      supersetRole: null,
     })
   })
 
-  ACCESSORIES[dayType].forEach(acc => {
-    for (let i = 1; i <= acc.sets; i++) {
-      sets.push({
-        exercise: acc.name,
-        exerciseLabel: acc.name,
-        setNumber: i,
-        plannedReps: acc.reps,
-        plannedWeight: null,
-        isAmrap: false,
-        isAccessory: true,
-      })
+  // Accessories — interleave superset pairs
+  let groupId = 0
+  ACCESSORY_GROUPS[dayType].forEach(group => {
+    if (group.type === 'solo') {
+      for (let i = 1; i <= group.item.sets; i++) {
+        sets.push({
+          exercise: group.item.name,
+          exerciseLabel: group.item.name,
+          setNumber: i,
+          plannedReps: group.item.reps,
+          plannedWeight: null,
+          isAmrap: false,
+          isAccessory: true,
+          supersetGroupId: null,
+          supersetRole: null,
+        })
+      }
+    } else {
+      const { a, b } = group
+      const maxSets = Math.max(a.sets, b.sets)
+      for (let i = 1; i <= maxSets; i++) {
+        if (i <= a.sets) {
+          const paired = i <= b.sets
+          sets.push({
+            exercise: a.name,
+            exerciseLabel: a.name,
+            setNumber: i,
+            plannedReps: a.reps,
+            plannedWeight: null,
+            isAmrap: false,
+            isAccessory: true,
+            supersetGroupId: paired ? groupId : null,
+            supersetRole: paired ? 'a' : null,
+          })
+        }
+        if (i <= b.sets) {
+          const paired = i <= a.sets
+          sets.push({
+            exercise: b.name,
+            exerciseLabel: b.name,
+            setNumber: i,
+            plannedReps: b.reps,
+            plannedWeight: null,
+            isAmrap: false,
+            isAccessory: true,
+            supersetGroupId: paired ? groupId : null,
+            supersetRole: paired ? 'b' : null,
+          })
+        }
+      }
+      groupId++
     }
   })
 

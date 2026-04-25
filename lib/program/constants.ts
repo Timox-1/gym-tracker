@@ -35,24 +35,34 @@ export const BBB_LIFT: Record<Lift, AnyLift> = {
   deadlift: 'squat',
 }
 
-export const ACCESSORIES: Record<Lift, { name: string; sets: number; reps: number }[]> = {
+export type AccessoryItem = { name: string; sets: number; reps: number }
+export type AccessoryGroup =
+  | { type: 'solo'; item: AccessoryItem }
+  | { type: 'superset'; a: AccessoryItem; b: AccessoryItem }
+
+export const ACCESSORY_GROUPS: Record<Lift, AccessoryGroup[]> = {
   squat: [
-    { name: 'Подтягивания', sets: 5, reps: 5 },
-    { name: 'Дипсы', sets: 3, reps: 10 },
-    { name: 'Бицепс', sets: 3, reps: 10 },
-    { name: 'Трицепс', sets: 3, reps: 10 },
+    { type: 'superset',
+      a: { name: 'Подтягивания', sets: 5, reps: 5 },
+      b: { name: 'Дипсы', sets: 3, reps: 10 } },
+    { type: 'superset',
+      a: { name: 'Бицепс', sets: 3, reps: 10 },
+      b: { name: 'Трицепс', sets: 3, reps: 10 } },
   ],
   bench: [
-    { name: 'Тяга нижнего блока', sets: 4, reps: 10 },
-    { name: 'Разводка гантелей', sets: 3, reps: 12 },
-    { name: 'Боковые дельты', sets: 3, reps: 15 },
-    { name: 'Задние дельты', sets: 3, reps: 15 },
+    { type: 'superset',
+      a: { name: 'Тяга нижнего блока', sets: 4, reps: 10 },
+      b: { name: 'Разводка гантелей', sets: 3, reps: 12 } },
+    { type: 'superset',
+      a: { name: 'Боковые дельты', sets: 3, reps: 15 },
+      b: { name: 'Задние дельты', sets: 3, reps: 15 } },
   ],
   deadlift: [
-    { name: 'Тяга штанги в наклоне', sets: 4, reps: 8 },
-    { name: 'Пресс', sets: 3, reps: 15 },
-    { name: 'Curl (бицепс)', sets: 3, reps: 10 },
-    { name: 'Трицепс', sets: 3, reps: 10 },
+    { type: 'solo', item: { name: 'Тяга штанги в наклоне', sets: 4, reps: 8 } },
+    { type: 'solo', item: { name: 'Пресс', sets: 3, reps: 15 } },
+    { type: 'superset',
+      a: { name: 'Curl (бицепс)', sets: 3, reps: 10 },
+      b: { name: 'Трицепс', sets: 3, reps: 10 } },
   ],
 }
 

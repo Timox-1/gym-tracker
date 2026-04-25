@@ -96,7 +96,17 @@ export function WorkoutClient({ sessionId, plan }: { sessionId: string; plan: Pl
       await completeWorkout(sessionId)
       setPhase('done')
     } else {
-      startTimer(getRestSeconds(current))
+      const next = plan[idx + 1]
+      const isSuperset =
+        current.supersetGroupId !== null &&
+        next.supersetGroupId === current.supersetGroupId &&
+        current.supersetRole === 'a' &&
+        next.supersetRole === 'b'
+      if (isSuperset) {
+        goToNext()
+      } else {
+        startTimer(getRestSeconds(current))
+      }
     }
   }
 
@@ -226,13 +236,21 @@ export function WorkoutClient({ sessionId, plan }: { sessionId: string; plan: Pl
       </div>
 
       {nextSet && current.isAccessory && (
-        <div className="bg-gray-800/60 rounded-xl p-3 border border-gray-700/50">
-          <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Следующий</p>
+        <div className={`rounded-xl p-3 border ${
+          current.supersetGroupId !== null && nextSet.supersetGroupId === current.supersetGroupId
+            ? 'bg-blue-900/20 border-blue-700/50'
+            : 'bg-gray-800/60 border-gray-700/50'
+        }`}>
+          <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">
+            {current.supersetRole === 'a' && nextSet.supersetRole === 'b'
+              ? '🔄 Суперсет — сразу после'
+              : 'Следующий'}
+          </p>
           <p className="text-gray-300 text-sm font-medium">
             {nextSet.exerciseLabel} · Сет {nextSet.setNumber}
           </p>
           <p className="text-gray-500 text-xs">
-            {nextSet.plannedWeight != null ? `${nextSet.plannedWeight}кг × ` : '× '}{nextSet.plannedReps}
+            × {nextSet.plannedReps}
           </p>
         </div>
       )}
