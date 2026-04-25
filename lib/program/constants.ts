@@ -1,6 +1,6 @@
 export const LIFTS = ['squat', 'bench', 'deadlift'] as const
 export type Lift = typeof LIFTS[number]
-export type AnyLift = Lift | 'ohp'
+export type AnyLift = Lift | 'ohp' | 'rdl'
 
 export const WEEK_SCHEMES = {
   1: [
@@ -30,7 +30,7 @@ export const BBB_REPS = 10
 export const BBB_PCT = 0.50
 
 export const BBB_LIFT: Record<Lift, AnyLift> = {
-  squat: 'deadlift',
+  squat: 'rdl',
   bench: 'ohp',
   deadlift: 'squat',
 }
@@ -61,4 +61,5 @@ export const LIFT_LABELS: Record<AnyLift, string> = {
   bench: 'Жим лёжа',
   deadlift: 'Становая',
   ohp: 'Жим стоя (OHP)',
+  rdl: 'Румынская тяга (RDL)',
 }

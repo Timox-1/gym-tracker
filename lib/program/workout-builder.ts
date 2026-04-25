@@ -31,7 +31,8 @@ export function buildWorkoutPlan(
   })
 
   const bbbLift = BBB_LIFT[dayType]
-  getBBBSets(tms[bbbLift] ?? tms[dayType]).forEach((s, i) => {
+  const bbbTm = bbbLift === 'rdl' ? tms['deadlift'] : (tms[bbbLift] ?? tms[dayType])
+  getBBBSets(bbbTm).forEach((s, i) => {
     sets.push({
       exercise: bbbLift,
       exerciseLabel: `${LIFT_LABELS[bbbLift]} (BBB)`,
