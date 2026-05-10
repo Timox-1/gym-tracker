@@ -7,6 +7,8 @@ export type PlannedSet = {
   setNumber: number
   plannedReps: number
   plannedWeight: number | null
+  lastWeight: number | null
+  lastReps: number | null
   isAmrap: boolean
   isAccessory: boolean
   supersetGroupId: number | null
@@ -28,6 +30,8 @@ export function buildWorkoutPlan(
       setNumber: i + 1,
       plannedReps: s.plannedReps,
       plannedWeight: s.plannedWeight,
+      lastWeight: null,
+      lastReps: null,
       isAmrap: s.isAmrap,
       isAccessory: false,
       supersetGroupId: null,
@@ -45,6 +49,8 @@ export function buildWorkoutPlan(
       setNumber: i + 1,
       plannedReps: s.plannedReps,
       plannedWeight: s.plannedWeight,
+      lastWeight: null,
+      lastReps: null,
       isAmrap: false,
       isAccessory: false,
       supersetGroupId: null,
@@ -63,6 +69,8 @@ export function buildWorkoutPlan(
           setNumber: i,
           plannedReps: group.item.reps,
           plannedWeight: null,
+          lastWeight: null,
+      lastReps: null,
           isAmrap: false,
           isAccessory: true,
           supersetGroupId: null,
@@ -81,6 +89,8 @@ export function buildWorkoutPlan(
             setNumber: i,
             plannedReps: a.reps,
             plannedWeight: null,
+            lastWeight: null,
+      lastReps: null,
             isAmrap: false,
             isAccessory: true,
             supersetGroupId: paired ? groupId : null,
@@ -95,6 +105,8 @@ export function buildWorkoutPlan(
             setNumber: i,
             plannedReps: b.reps,
             plannedWeight: null,
+            lastWeight: null,
+      lastReps: null,
             isAmrap: false,
             isAccessory: true,
             supersetGroupId: paired ? groupId : null,

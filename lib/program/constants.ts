@@ -31,7 +31,7 @@ export const BBB_PCT = 0.50
 
 export const BBB_LIFT: Record<Lift, AnyLift> = {
   squat: 'rdl',
-  bench: 'ohp',
+  bench: 'bench',
   deadlift: 'squat',
 }
 
@@ -46,22 +46,24 @@ export const ACCESSORY_GROUPS: Record<Lift, AccessoryGroup[]> = {
       a: { name: 'Подтягивания', sets: 5, reps: 5 },
       b: { name: 'Дипсы', sets: 3, reps: 10 } },
     { type: 'superset',
-      a: { name: 'Бицепс', sets: 3, reps: 10 },
+      a: { name: 'Молотки', sets: 3, reps: 10 },
       b: { name: 'Трицепс', sets: 3, reps: 10 } },
   ],
   bench: [
     { type: 'superset',
       a: { name: 'Тяга нижнего блока', sets: 4, reps: 10 },
-      b: { name: 'Разводка гантелей', sets: 3, reps: 12 } },
+      b: { name: 'Жим на наклонной', sets: 4, reps: 10 } },
+    { type: 'solo', item: { name: 'OHP', sets: 3, reps: 10 } },
     { type: 'superset',
       a: { name: 'Боковые дельты', sets: 3, reps: 15 },
       b: { name: 'Задние дельты', sets: 3, reps: 15 } },
   ],
   deadlift: [
-    { type: 'solo', item: { name: 'Тяга штанги в наклоне', sets: 4, reps: 8 } },
-    { type: 'solo', item: { name: 'Пресс', sets: 3, reps: 15 } },
     { type: 'superset',
-      a: { name: 'Curl (бицепс)', sets: 3, reps: 10 },
+      a: { name: 'Тяга штанги в наклоне', sets: 4, reps: 8 },
+      b: { name: 'Пресс', sets: 3, reps: 15 } },
+    { type: 'superset',
+      a: { name: 'Сгибания сидя', sets: 3, reps: 10 },
       b: { name: 'Трицепс', sets: 3, reps: 10 } },
   ],
 }

@@ -19,7 +19,7 @@ function formatTime(s: number): string {
 export function WorkoutClient({ sessionId, plan }: { sessionId: string; plan: PlannedSet[] }) {
   const router = useRouter()
   const [idx, setIdx] = useState(0)
-  const [weight, setWeight] = useState(String(plan[0]?.plannedWeight ?? ''))
+  const [weight, setWeight] = useState(String(plan[0]?.plannedWeight ?? plan[0]?.lastWeight ?? ''))
   const [reps, setReps] = useState(String(plan[0]?.plannedReps ?? ''))
   const [saving, setSaving] = useState(false)
   const [phase, setPhase] = useState<'input' | 'rest' | 'done'>('input')
@@ -50,7 +50,7 @@ export function WorkoutClient({ sessionId, plan }: { sessionId: string; plan: Pl
     if (nextIdx >= plan.length) { setPhase('done'); return }
     const next = plan[nextIdx]
     setIdx(nextIdx)
-    setWeight(String(next.plannedWeight ?? ''))
+    setWeight(String(next.plannedWeight ?? next.lastWeight ?? ''))
     setReps(String(next.plannedReps))
     setAmrapRM(null)
     setPhase('input')
@@ -221,6 +221,14 @@ export function WorkoutClient({ sessionId, plan }: { sessionId: string; plan: Pl
           <input type="number" value={weight} onChange={e => setWeight(e.target.value)}
             step="2.5" inputMode="decimal"
             className="w-full bg-gray-800 text-white text-2xl font-bold rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          {current.isAccessory && current.lastWeight != null && (
+            <p className="text-gray-500 text-xs mt-1">
+              прошлый раз: {current.lastWeight} кг × {current.lastReps ?? '?'} повт.
+              {current.lastReps != null && current.lastReps > current.plannedReps && (
+                <span className="text-yellow-500 ml-1">→ попробуй добавить вес</span>
+              )}
+            </p>
+          )}
         </div>
 
         <div>
