@@ -184,6 +184,21 @@ export function WorkoutClient({ sessionId, plan }: { sessionId: string; plan: Pl
           Пропустить отдых →
         </button>
 
+        {idx > 0 && (
+          <button onClick={() => {
+            if (timerRef.current) clearInterval(timerRef.current)
+            const prev = plan[idx - 1]
+            setIdx(idx - 1)
+            setWeight(String(prev.plannedWeight ?? prev.lastWeight ?? ''))
+            setReps(String(prev.plannedReps))
+            setAmrapRM(null)
+            setPhase('input')
+            setConfirmEnd(false)
+          }} className="w-full text-gray-600 py-2 text-sm">
+            ← Назад
+          </button>
+        )}
+
         {!confirmEnd ? (
           <button onClick={() => setConfirmEnd(true)}
             className="w-full py-3 text-sm text-gray-500 bg-gray-800 hover:bg-gray-700 rounded-xl transition-colors">
@@ -263,10 +278,24 @@ export function WorkoutClient({ sessionId, plan }: { sessionId: string; plan: Pl
         </div>
       )}
 
-      <button onClick={handleConfirm} disabled={saving}
-        className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-2xl py-5 text-xl transition-colors">
-        {saving ? 'Сохраняем...' : idx === plan.length - 1 ? 'Завершить тренировку' : 'Сет выполнен →'}
-      </button>
+      {idx === plan.length - 1 ? (
+        !confirmEnd ? (
+          <button onClick={() => setConfirmEnd(true)} disabled={saving}
+            className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-2xl py-5 text-xl transition-colors">
+            {saving ? 'Сохраняем...' : 'Завершить тренировку'}
+          </button>
+        ) : (
+          <button onClick={handleConfirm} disabled={saving}
+            className="w-full bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-bold rounded-2xl py-5 text-xl transition-colors">
+            {saving ? 'Сохраняем...' : 'Точно завершить?'}
+          </button>
+        )
+      ) : (
+        <button onClick={handleConfirm} disabled={saving}
+          className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-2xl py-5 text-xl transition-colors">
+          {saving ? 'Сохраняем...' : 'Сет выполнен →'}
+        </button>
+      )}
 
       <div className="flex gap-2">
         <button onClick={handleSkip}
