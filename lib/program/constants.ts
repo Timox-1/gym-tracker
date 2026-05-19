@@ -44,7 +44,7 @@ export const ACCESSORY_GROUPS: Record<Lift, AccessoryGroup[]> = {
   squat: [
     { type: 'superset',
       a: { name: 'Подтягивания', sets: 5, reps: 5 },
-      b: { name: 'Дипсы', sets: 3, reps: 10 } },
+      b: { name: 'Брусья', sets: 3, reps: 10 } },
     { type: 'superset',
       a: { name: 'Молотки', sets: 3, reps: 10 },
       b: { name: 'Трицепс', sets: 3, reps: 10 } },
@@ -53,7 +53,7 @@ export const ACCESSORY_GROUPS: Record<Lift, AccessoryGroup[]> = {
     { type: 'superset',
       a: { name: 'Тяга нижнего блока', sets: 4, reps: 10 },
       b: { name: 'Жим на наклонной', sets: 4, reps: 10 } },
-    { type: 'solo', item: { name: 'OHP', sets: 3, reps: 10 } },
+    { type: 'solo', item: { name: 'Армейский жим', sets: 3, reps: 10 } },
     { type: 'superset',
       a: { name: 'Боковые дельты', sets: 3, reps: 15 },
       b: { name: 'Задние дельты', sets: 3, reps: 15 } },
@@ -72,6 +72,6 @@ export const LIFT_LABELS: Record<AnyLift, string> = {
   squat: 'Присед',
   bench: 'Жим лёжа',
   deadlift: 'Становая',
-  ohp: 'Жим стоя (OHP)',
-  rdl: 'Румынская тяга (RDL)',
+  ohp: 'Армейский жим',
+  rdl: 'Румынская тяга',
 }
