@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { updateTM, applyProgression } from '@/app/actions/program'
+import { logBodyWeight } from '@/app/actions/bodyweight'
 import { LIFT_LABELS } from '@/lib/program/constants'
 
 const LIFTS = ['squat', 'bench', 'deadlift', 'ohp'] as const
@@ -20,6 +21,14 @@ export default async function ProgramPage() {
     .order('date', { ascending: false }).limit(1).maybeSingle()
 
   const showProgression = lastSession?.week_number === 4 && lastSession?.day_type === 'deadlift'
+
+  const { data: lastWeight } = await supabase
+    .from('body_weights')
+    .select('weight_kg')
+    .eq('user_id', user.id)
+    .order('date', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   return (
     <div className="p-4 space-y-6">
@@ -61,6 +70,22 @@ export default async function ProgramPage() {
         <p className="text-gray-300 text-sm">5/3/1 BBB · 3 дня · 4-недельные циклы</p>
         <p className="text-gray-500 text-xs">Пн: Присед · Ср: Жим · Пт: Становая</p>
         <p className="text-gray-500 text-xs">BBB: 5×10 @ 50% TM после основных сетов</p>
+      </div>
+
+      <div className="space-y-3">
+        <h2 className="text-gray-300 font-semibold">Вес тела</h2>
+        <form action={logBodyWeight} className="bg-gray-900 rounded-2xl p-4 flex items-center gap-3">
+          <span className="text-gray-300 flex-1 text-sm">
+            {lastWeight ? `Последний: ${lastWeight.weight_kg} кг` : 'Не записан'}
+          </span>
+          <input name="weight" type="number" step="0.1" inputMode="decimal" placeholder="кг"
+            defaultValue={lastWeight?.weight_kg ?? ''}
+            className="bg-gray-800 text-white w-20 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <button type="submit"
+            className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl px-3 py-2 text-sm font-medium transition-colors">
+            ✓
+          </button>
+        </form>
       </div>
     </div>
   )

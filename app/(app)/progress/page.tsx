@@ -43,6 +43,13 @@ export default async function ProgressPage() {
       sum + ((set.actual_weight_kg ?? 0) * (set.actual_reps ?? 0)), 0) ?? 0,
   })).reverse() ?? []
 
+  const { data: weightHistory } = await supabase
+    .from('body_weights')
+    .select('date, weight_kg')
+    .eq('user_id', user.id)
+    .order('date', { ascending: false })
+    .limit(10)
+
   return (
     <div className="p-4 space-y-4">
       <h1 className="text-2xl font-bold">Прогресс</h1>
@@ -57,6 +64,21 @@ export default async function ProgressPage() {
               <div key={i} className="flex justify-between text-sm">
                 <span className="text-gray-400">{d.date}</span>
                 <span className="text-white font-medium">{Math.round(d.tonnage).toLocaleString()} кг</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {weightHistory && weightHistory.length > 0 && (
+        <div className="bg-gray-900 rounded-2xl p-4">
+          <p className="text-gray-400 text-sm font-medium mb-3">Вес тела (кг)</p>
+          <div className="space-y-2">
+            {weightHistory.map((w, i) => (
+              <div key={i} className="flex justify-between text-sm">
+                <span className="text-gray-400">
+                  {new Date(w.date).toLocaleDateString('ru', { day: 'numeric', month: 'short' })}
+                </span>
+                <span className="text-white font-medium">{w.weight_kg} кг</span>
               </div>
             ))}
           </div>
