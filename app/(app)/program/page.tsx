@@ -4,7 +4,7 @@ import { updateTM, applyProgression } from '@/app/actions/program'
 import { logBodyWeight } from '@/app/actions/bodyweight'
 import { LIFT_LABELS } from '@/lib/program/constants'
 
-const LIFTS = ['squat', 'bench', 'deadlift', 'ohp'] as const
+const LIFTS = ['squat', 'bench', 'deadlift'] as const
 
 export default async function ProgramPage() {
   const supabase = await createClient()
