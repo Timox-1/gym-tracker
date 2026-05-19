@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { saveSet, completeWorkout } from '@/app/actions/sets'
 import { calcEstimated1RM } from '@/lib/program/calculator'
 import type { PlannedSet } from '@/lib/program/workout-builder'
+import { applyTMSuggestion } from '@/app/actions/program'
 
 function getRestSeconds(set: PlannedSet): number {
   if (set.isAccessory) return 90
@@ -16,10 +17,13 @@ function formatTime(s: number): string {
   return `${m}:${(s % 60).toString().padStart(2, '0')}`
 }
 
-export function WorkoutClient({ sessionId, plan, weekNumber }: {
+export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, historicalBest1RM }: {
   sessionId: string
   plan: PlannedSet[]
   weekNumber: 1 | 2 | 3 | 4
+  dayType: string
+  mainTM: number
+  historicalBest1RM: number | null
 }) {
   const AMRAP_TARGETS: Record<number, string> = {
     1: '5–8 повт',
@@ -36,6 +40,9 @@ export function WorkoutClient({ sessionId, plan, weekNumber }: {
   const [amrapRM, setAmrapRM] = useState<number | null>(null)
   const [restSecs, setRestSecs] = useState(0)
   const [confirmEnd, setConfirmEnd] = useState(false)
+  const [amrapReps, setAmrapReps] = useState<number | null>(null)
+  const [tmSuggestion, setTmSuggestion] = useState<number | null>(null)
+  const [tmApplied, setTmApplied] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const advanceRef = useRef(false)
 
@@ -99,7 +106,15 @@ export function WorkoutClient({ sessionId, plan, weekNumber }: {
       isAmrap: current.isAmrap,
     })
 
-    if (current.isAmrap && r > 0) setAmrapRM(calcEstimated1RM(w, r))
+    if (current.isAmrap && r > 0) {
+      const rm = calcEstimated1RM(w, r)
+      setAmrapRM(rm)
+      setAmrapReps(r)
+      if (weekNumber === 3 && (r < 3 || r > 8)) {
+        const suggested = Math.round((rm * 0.9) / 2.5) * 2.5
+        if (Math.abs(suggested - mainTM) >= 5) setTmSuggestion(suggested)
+      }
+    }
     setSaving(false)
 
     if (idx === plan.length - 1) {
@@ -137,16 +152,50 @@ export function WorkoutClient({ sessionId, plan, weekNumber }: {
 
   // DONE
   if (phase === 'done') {
+    const isPR = amrapRM !== null && historicalBest1RM !== null && amrapRM > historicalBest1RM
+    const isFirstPR = amrapRM !== null && historicalBest1RM === null
+
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4 text-center gap-4">
-        <div className="text-6xl">💪</div>
-        <h2 className="text-2xl font-bold">Тренировка завершена!</h2>
+        <div className="text-6xl">{isPR || isFirstPR ? '🏆' : '💪'}</div>
+        <h2 className="text-2xl font-bold">
+          {isPR || isFirstPR ? 'Новый рекорд!' : 'Тренировка завершена!'}
+        </h2>
+
         {amrapRM && (
           <div className="bg-green-900/30 border border-green-700 rounded-xl p-4 w-full max-w-sm">
             <p className="text-green-400 text-sm">Расчётный максимум</p>
             <p className="text-green-300 text-2xl font-bold">~{amrapRM} кг</p>
+            {isPR && historicalBest1RM && (
+              <p className="text-green-500 text-xs mt-1">Предыдущий: {historicalBest1RM} кг</p>
+            )}
           </div>
         )}
+
+        {tmSuggestion && !tmApplied && (
+          <div className="bg-yellow-900/30 border border-yellow-700 rounded-xl p-4 w-full max-w-sm text-left">
+            <p className="text-yellow-400 text-sm font-semibold">Рекомендация по ТМ</p>
+            <p className="text-gray-300 text-sm mt-1">
+              {amrapReps && amrapReps > 8
+                ? `Вышло ${amrapReps} повт — ТМ занижен.`
+                : `Вышло ${amrapReps} повт — ТМ завышен.`}
+              {' '}Рекомендую: <span className="text-white font-bold">{tmSuggestion} кг</span> (сейчас {mainTM} кг)
+            </p>
+            <button
+              onClick={async () => {
+                await applyTMSuggestion(dayType, tmSuggestion)
+                setTmApplied(true)
+              }}
+              className="mt-3 w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-xl py-2 text-sm transition-colors">
+              Применить {tmSuggestion} кг
+            </button>
+          </div>
+        )}
+
+        {tmApplied && (
+          <p className="text-yellow-400 text-sm">ТМ обновлён ✓</p>
+        )}
+
         <button onClick={() => router.push('/today')}
           className="bg-blue-600 text-white font-bold rounded-2xl px-8 py-4 text-lg">
           На главную

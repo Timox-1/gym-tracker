@@ -26,6 +26,22 @@ export default async function WorkoutPage({ params }: { params: Promise<{ id: st
   const tms = Object.fromEntries((tmsData ?? []).map((t: { lift: string; value_kg: number }) => [t.lift, t.value_kg])) as Record<AnyLift, number>
   const plan = buildWorkoutPlan(session.day_type as Lift, session.week_number as 1|2|3|4, tms)
 
+  const mainTM: number = tms[session.day_type as keyof typeof tms] ?? 0
+
+  const { data: bestSet } = await supabase
+    .from('sets')
+    .select('estimated_1rm, workout_sessions!inner(day_type, user_id)')
+    .eq('workout_sessions.user_id', user.id)
+    .eq('workout_sessions.day_type', session.day_type)
+    .eq('is_amrap', true)
+    .not('estimated_1rm', 'is', null)
+    .neq('session_id', id)
+    .order('estimated_1rm', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const historicalBest1RM: number | null = bestSet ? Math.round((bestSet as any).estimated_1rm) : null
+
   // Inject last-session weights for accessory exercises
   const accessoryExercises = [...new Set(plan.filter(s => s.isAccessory).map(s => s.exercise))]
   type LastData = { weight: number; reps: number }
@@ -80,7 +96,14 @@ export default async function WorkoutPage({ params }: { params: Promise<{ id: st
         <p className="text-gray-400 text-sm">Нед. {session.week_number} · Цикл {session.cycle_number}</p>
         <h1 className="text-xl font-bold">{LIFT_LABELS[session.day_type as Lift]}</h1>
       </div>
-      <WorkoutClient sessionId={id} plan={planWithHistory} weekNumber={session.week_number as 1|2|3|4} />
+      <WorkoutClient
+          sessionId={id}
+          plan={planWithHistory}
+          weekNumber={session.week_number as 1|2|3|4}
+          dayType={session.day_type}
+          mainTM={mainTM}
+          historicalBest1RM={historicalBest1RM}
+        />
     </div>
   )
 }

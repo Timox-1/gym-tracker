@@ -40,3 +40,16 @@ export async function applyProgression() {
   revalidatePath('/program')
   revalidatePath('/today')
 }
+
+export async function applyTMSuggestion(lift: string, newTM: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth')
+
+  await supabase.from('training_maxes').upsert(
+    { user_id: user.id, lift, value_kg: newTM, updated_at: new Date().toISOString() },
+    { onConflict: 'user_id,lift' }
+  )
+  revalidatePath('/program')
+  revalidatePath('/today')
+}
