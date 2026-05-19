@@ -80,7 +80,7 @@ export default async function WorkoutPage({ params }: { params: Promise<{ id: st
         <p className="text-gray-400 text-sm">Нед. {session.week_number} · Цикл {session.cycle_number}</p>
         <h1 className="text-xl font-bold">{LIFT_LABELS[session.day_type as Lift]}</h1>
       </div>
-      <WorkoutClient sessionId={id} plan={planWithHistory} />
+      <WorkoutClient sessionId={id} plan={planWithHistory} weekNumber={session.week_number as 1|2|3|4} />
     </div>
   )
 }

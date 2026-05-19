@@ -16,7 +16,17 @@ function formatTime(s: number): string {
   return `${m}:${(s % 60).toString().padStart(2, '0')}`
 }
 
-export function WorkoutClient({ sessionId, plan }: { sessionId: string; plan: PlannedSet[] }) {
+export function WorkoutClient({ sessionId, plan, weekNumber }: {
+  sessionId: string
+  plan: PlannedSet[]
+  weekNumber: 1 | 2 | 3 | 4
+}) {
+  const AMRAP_TARGETS: Record<number, string> = {
+    1: '5–8 повт',
+    2: '3–6 повт',
+    3: '3–5 повт',
+  }
+
   const router = useRouter()
   const [idx, setIdx] = useState(0)
   const [weight, setWeight] = useState(String(plan[0]?.plannedWeight ?? plan[0]?.lastWeight ?? ''))
@@ -249,7 +259,7 @@ export function WorkoutClient({ sessionId, plan }: { sessionId: string; plan: Pl
         <div>
           <label className="text-gray-400 text-sm block mb-1">
             {current.isAmrap
-              ? 'Повторения (максимум, оставь 1-2 в запасе)'
+              ? `Повторения — цель: ${AMRAP_TARGETS[weekNumber] ?? '1–5 повт'}`
               : `Повторения (план: ${current.plannedReps})`}
           </label>
           <input type="number" value={reps} onChange={e => setReps(e.target.value)}

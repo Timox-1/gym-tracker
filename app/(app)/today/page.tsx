@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getNextWorkout } from '@/lib/program/schedule'
 import { buildWorkoutPlan } from '@/lib/program/workout-builder'
 import { LIFT_LABELS, type Lift, type AnyLift } from '@/lib/program/constants'
-import { startWorkout } from '@/app/actions/workout'
+import { TodayActions } from '@/components/today/today-actions'
 import { redirect } from 'next/navigation'
 
 export default async function TodayPage() {
@@ -66,12 +66,11 @@ export default async function TodayPage() {
               <p className="text-gray-500 text-sm text-center">...ещё {plan.length - 8} сетов</p>
             )}
           </div>
-          <form action={startWorkout.bind(null, next.dayType, next.weekNumber, next.cycleNumber)}>
-            <button type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl py-5 text-xl transition-colors">
-              Начать тренировку
-            </button>
-          </form>
+          <TodayActions
+            dayType={next.dayType}
+            weekNumber={next.weekNumber}
+            cycleNumber={next.cycleNumber}
+          />
         </>
       )}
     </div>
