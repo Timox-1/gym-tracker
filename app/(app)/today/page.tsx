@@ -15,7 +15,7 @@ export default async function TodayPage() {
     .select('day_type, week_number, cycle_number')
     .eq('user_id', user.id)
     .not('completed_at', 'is', null)
-    .order('date', { ascending: false })
+    .order('completed_at', { ascending: false })
     .limit(1)
     .maybeSingle()
 
