@@ -84,6 +84,9 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
       setRestSecs(prev => {
         if (prev <= 1) {
           clearInterval(timerRef.current!)
+          if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+            navigator.vibrate([300, 100, 300])
+          }
           advanceRef.current = true
           return 0
         }
@@ -158,6 +161,9 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
   if (phase === 'done') {
     const isPR = amrapRM !== null && historicalBest1RM !== null && amrapRM > historicalBest1RM
     const isFirstPR = amrapRM !== null && historicalBest1RM === null
+    const totalVolume = Math.round(
+      Object.values(savedActuals).reduce((sum, { weight, reps }) => sum + weight * reps, 0)
+    )
 
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4 text-center gap-4">
@@ -198,6 +204,13 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
 
         {tmApplied && (
           <p className="text-yellow-400 text-sm">ТМ обновлён ✓</p>
+        )}
+
+        {totalVolume > 0 && (
+          <div className="bg-gray-800 rounded-xl p-4 w-full max-w-sm">
+            <p className="text-gray-400 text-sm">Тоннаж</p>
+            <p className="text-white text-2xl font-bold">{totalVolume.toLocaleString('ru')} кг</p>
+          </div>
         )}
 
         <button onClick={() => router.push('/today')}
@@ -301,7 +314,7 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
           <input type="number" value={weight} onChange={e => setWeight(e.target.value)}
             step="2.5" inputMode="decimal"
             className="w-full bg-gray-800 text-white text-2xl font-bold rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          {current.isAccessory && current.lastWeight != null && (
+          {(current.isAccessory || current.isBBB) && current.lastWeight != null && (
             <p className="text-gray-500 text-xs mt-1">
               прошлый раз: {current.lastWeight} кг × {current.lastReps ?? '?'} повт.
               {current.lastReps != null && current.lastReps > current.plannedReps && (

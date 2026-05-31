@@ -42,12 +42,12 @@ export default async function WorkoutPage({ params }: { params: Promise<{ id: st
 
   const historicalBest1RM: number | null = bestSet ? Math.round((bestSet as any).estimated_1rm) : null
 
-  // Inject last-session weights for accessory exercises
-  const accessoryExercises = [...new Set(plan.filter(s => s.isAccessory).map(s => s.exercise))]
+  // Inject last-session weights for accessory and BBB exercises
+  const historyExercises = [...new Set(plan.filter(s => s.isAccessory || s.isBBB).map(s => s.exercise))]
   type LastData = { weight: number; reps: number }
   const lastDataMap: Record<string, LastData> = {}
 
-  if (accessoryExercises.length > 0) {
+  if (historyExercises.length > 0) {
     const { data: recentSessions } = await supabase
       .from('workout_sessions')
       .select('id')
@@ -63,7 +63,7 @@ export default async function WorkoutPage({ params }: { params: Promise<{ id: st
         .from('sets')
         .select('exercise, actual_weight_kg, actual_reps, session_id')
         .in('session_id', sessionIds)
-        .in('exercise', accessoryExercises)
+        .in('exercise', historyExercises)
         .not('actual_weight_kg', 'is', null)
         .gt('actual_weight_kg', 0)
 
@@ -85,7 +85,7 @@ export default async function WorkoutPage({ params }: { params: Promise<{ id: st
   }
 
   const planWithHistory = plan.map(s =>
-    s.isAccessory && lastDataMap[s.exercise] != null
+    (s.isAccessory || s.isBBB) && lastDataMap[s.exercise] != null
       ? { ...s, lastWeight: lastDataMap[s.exercise].weight, lastReps: lastDataMap[s.exercise].reps }
       : s
   )
