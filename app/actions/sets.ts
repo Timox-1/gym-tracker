@@ -18,7 +18,7 @@ export async function saveSet(params: {
     ? calcEstimated1RM(params.actualWeightKg, params.actualReps)
     : null
 
-  const { error } = await supabase.from('sets').insert({
+  const { error } = await supabase.from('sets').upsert({
     session_id: params.sessionId,
     exercise: params.exercise,
     set_number: params.setNumber,
@@ -28,7 +28,7 @@ export async function saveSet(params: {
     actual_weight_kg: params.actualWeightKg,
     is_amrap: params.isAmrap,
     estimated_1rm: estimated1rm,
-  })
+  }, { onConflict: 'session_id,exercise,set_number' })
   if (error) throw new Error(error.message)
   revalidatePath('/history')
 }

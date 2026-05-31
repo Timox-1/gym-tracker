@@ -41,6 +41,8 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
   const [restSecs, setRestSecs] = useState(0)
   const [confirmEnd, setConfirmEnd] = useState(false)
   const [amrapReps, setAmrapReps] = useState<number | null>(null)
+  const [savedActuals, setSavedActuals] = useState<Record<number, { weight: number; reps: number }>>({})
+
   const [tmSuggestion, setTmSuggestion] = useState<number | null>(null)
   const [tmApplied, setTmApplied] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -105,6 +107,8 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
       actualWeightKg: w,
       isAmrap: current.isAmrap,
     })
+
+    setSavedActuals(prev => ({ ...prev, [idx]: { weight: w, reps: r } }))
 
     if (current.isAmrap && r > 0) {
       const rm = calcEstimated1RM(w, r)
@@ -246,15 +250,17 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
         {idx > 0 && (
           <button onClick={() => {
             if (timerRef.current) clearInterval(timerRef.current)
-            const prev = plan[idx - 1]
-            setIdx(idx - 1)
-            setWeight(String(prev.plannedWeight ?? prev.lastWeight ?? ''))
-            setReps(String(prev.plannedReps))
+            const prevIdx = idx - 1
+            const prev = plan[prevIdx]
+            const saved = savedActuals[prevIdx]
+            setIdx(prevIdx)
+            setWeight(String(saved?.weight ?? prev.plannedWeight ?? prev.lastWeight ?? ''))
+            setReps(String(saved?.reps ?? prev.plannedReps))
             setAmrapRM(null)
             setPhase('input')
             setConfirmEnd(false)
           }} className="w-full text-gray-600 py-2 text-sm">
-            ← Назад
+            ← Назад (изменить)
           </button>
         )}
 
@@ -376,10 +382,12 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
 
       {idx > 0 && (
         <button onClick={() => {
-          const prev = plan[idx - 1]
-          setIdx(idx - 1)
-          setWeight(String(prev.plannedWeight ?? ''))
-          setReps(String(prev.plannedReps))
+          const prevIdx = idx - 1
+          const prev = plan[prevIdx]
+          const saved = savedActuals[prevIdx]
+          setIdx(prevIdx)
+          setWeight(String(saved?.weight ?? prev.plannedWeight ?? prev.lastWeight ?? ''))
+          setReps(String(saved?.reps ?? prev.plannedReps))
           setAmrapRM(null)
         }} className="w-full text-gray-600 py-2 text-sm">
           ← Назад
