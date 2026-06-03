@@ -69,7 +69,7 @@ export default async function WorkoutPage({ params }: { params: Promise<{ id: st
 
       if (lastSets) {
         type SetRow = { exercise: string; actual_weight_kg: number; actual_reps: number; session_id: string }
-        for (const exercise of accessoryExercises) {
+        for (const exercise of historyExercises) {
           const exerciseSets = (lastSets as SetRow[]).filter(s => s.exercise === exercise)
           for (const sessionId of sessionIds) {
             const setsFromSession = exerciseSets.filter(s => s.session_id === sessionId)
