@@ -35,10 +35,16 @@ export async function saveSet(params: {
 
 export async function completeWorkout(sessionId: string) {
   const supabase = await createClient()
-  await supabase
+  const { error } = await supabase
     .from('workout_sessions')
     .update({ completed_at: new Date().toISOString() })
     .eq('id', sessionId)
+
+  if (error) {
+    console.error('completeWorkout error:', error)
+    throw new Error(error.message)
+  }
+
   revalidatePath('/history')
   revalidatePath('/progress')
   revalidatePath('/today')
