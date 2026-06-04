@@ -336,7 +336,7 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
         </div>
       </div>
 
-      {nextSet && current.isAccessory && (
+      {nextSet && (current.isAccessory || current.isBBB) && (
         <div className={`rounded-xl p-3 border ${
           current.supersetGroupId !== null && nextSet.supersetGroupId === current.supersetGroupId
             ? 'bg-blue-900/20 border-blue-700/50'

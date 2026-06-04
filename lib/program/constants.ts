@@ -2,6 +2,14 @@ export const LIFTS = ['squat', 'bench', 'deadlift'] as const
 export type Lift = typeof LIFTS[number]
 export type AnyLift = Lift | 'ohp' | 'rdl'
 
+export type BbbCompanion = { name: string; reps: number }
+
+export const BBB_COMPANION: Record<Lift, BbbCompanion> = {
+  squat: { name: 'Икры', reps: 12 },
+  bench: { name: 'Тяга к лицу', reps: 15 },
+  deadlift: { name: 'Икры', reps: 12 },
+}
+
 export const WEEK_SCHEMES = {
   1: [
     { reps: 5, pct: 0.65, isAmrap: false },
@@ -48,12 +56,15 @@ export const ACCESSORY_GROUPS: Record<Lift, AccessoryGroup[]> = {
     { type: 'superset',
       a: { name: 'Молотки', sets: 3, reps: 10 },
       b: { name: 'Трицепс', sets: 3, reps: 10 } },
+    { type: 'solo', item: { name: 'Подъём ног в висе', sets: 3, reps: 15 } },
   ],
   bench: [
     { type: 'superset',
       a: { name: 'Тяга нижнего блока', sets: 4, reps: 10 },
       b: { name: 'Жим на наклонной', sets: 4, reps: 10 } },
-    { type: 'solo', item: { name: 'Армейский жим', sets: 3, reps: 10 } },
+    { type: 'superset',
+      a: { name: 'Армейский жим', sets: 3, reps: 10 },
+      b: { name: 'Гиперэкстензия', sets: 3, reps: 12 } },
     { type: 'superset',
       a: { name: 'Боковые дельты', sets: 3, reps: 15 },
       b: { name: 'Задние дельты', sets: 3, reps: 15 } },
@@ -64,7 +75,7 @@ export const ACCESSORY_GROUPS: Record<Lift, AccessoryGroup[]> = {
       b: { name: 'Пресс', sets: 3, reps: 15 } },
     { type: 'superset',
       a: { name: 'Сгибания сидя', sets: 3, reps: 10 },
-      b: { name: 'Трицепс', sets: 3, reps: 10 } },
+      b: { name: 'Разведения гантелями', sets: 3, reps: 12 } },
   ],
 }
 

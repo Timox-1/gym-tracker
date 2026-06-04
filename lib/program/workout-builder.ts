@@ -1,5 +1,5 @@
 import { getMainSets, getBBBSets } from './calculator'
-import { BBB_LIFT, ACCESSORY_GROUPS, LIFT_LABELS, type Lift, type AnyLift } from './constants'
+import { BBB_LIFT, BBB_COMPANION, ACCESSORY_GROUPS, LIFT_LABELS, type Lift, type AnyLift } from './constants'
 
 export type PlannedSet = {
   exercise: string
@@ -41,10 +41,13 @@ export function buildWorkoutPlan(
     })
   })
 
-  // BBB sets — use _bbb suffix when the BBB lift equals the main lift (bench day)
+  // BBB sets — paired with companion exercise during rest
   const bbbLift = BBB_LIFT[dayType]
   const bbbExercise = bbbLift === dayType ? `${bbbLift}_bbb` : bbbLift
   const bbbTm = bbbLift === 'rdl' ? tms['deadlift'] : (tms[bbbLift] ?? tms[dayType])
+  const companion = BBB_COMPANION[dayType]
+  let groupId = 0
+
   getBBBSets(bbbTm).forEach((s, i) => {
     sets.push({
       exercise: bbbExercise,
@@ -57,13 +60,27 @@ export function buildWorkoutPlan(
       isAmrap: false,
       isAccessory: false,
       isBBB: true,
-      supersetGroupId: null,
-      supersetRole: null,
+      supersetGroupId: groupId,
+      supersetRole: 'a',
+    })
+    sets.push({
+      exercise: companion.name,
+      exerciseLabel: companion.name,
+      setNumber: i + 1,
+      plannedReps: companion.reps,
+      plannedWeight: null,
+      lastWeight: null,
+      lastReps: null,
+      isAmrap: false,
+      isAccessory: true,
+      isBBB: false,
+      supersetGroupId: groupId,
+      supersetRole: 'b',
     })
   })
+  groupId++
 
   // Accessories — interleave superset pairs
-  let groupId = 0
   ACCESSORY_GROUPS[dayType].forEach(group => {
     if (group.type === 'solo') {
       for (let i = 1; i <= group.item.sets; i++) {
