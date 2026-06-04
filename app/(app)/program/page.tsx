@@ -74,8 +74,8 @@ export default async function ProgramPage() {
             />
             <button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl px-4 py-2 transition-colors">
-              ОК
+              className="shrink-0 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl w-10 h-10 flex items-center justify-center transition-colors">
+              ✓
             </button>
           </form>
         ))}
