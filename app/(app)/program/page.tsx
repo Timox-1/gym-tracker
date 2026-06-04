@@ -1,10 +1,25 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { updateTM, applyProgression } from '@/app/actions/program'
-import { logBodyWeight } from '@/app/actions/bodyweight'
-import { LIFT_LABELS } from '@/lib/program/constants'
+import { getNextWorkout } from '@/lib/program/schedule'
+import {
+  LIFTS, LIFT_LABELS, ACCESSORY_GROUPS, BBB_COMPANION, BBB_LIFT,
+  BBB_SETS, BBB_REPS, BBB_PCT, type Lift, type AnyLift,
+} from '@/lib/program/constants'
+import { calcWeight, getMainSets } from '@/lib/program/calculator'
+import { updateTM } from '@/app/actions/program'
 
-const LIFTS = ['squat', 'bench', 'deadlift'] as const
+const DAY_LABELS: Record<Lift, string> = {
+  squat: 'Понедельник',
+  bench: 'Среда',
+  deadlift: 'Пятница',
+}
+
+const WEEK_LABELS: Record<number, string> = {
+  1: 'Неделя 1 — 5/5/5+',
+  2: 'Неделя 2 — 3/3/3+',
+  3: 'Неделя 3 — 5/3/1+',
+  4: 'Неделя 4 — Разгрузка',
+}
 
 export default async function ProgramPage() {
   const supabase = await createClient()
@@ -13,80 +28,132 @@ export default async function ProgramPage() {
 
   const { data: tmsData } = await supabase
     .from('training_maxes').select('lift, value_kg').eq('user_id', user.id)
-  const tms = Object.fromEntries((tmsData ?? []).map(t => [t.lift, t.value_kg]))
+  const tms = Object.fromEntries(
+    (tmsData ?? []).map((t: { lift: string; value_kg: number }) => [t.lift, t.value_kg])
+  ) as Record<AnyLift, number>
 
   const { data: lastSession } = await supabase
-    .from('workout_sessions').select('week_number, day_type')
-    .eq('user_id', user.id).not('completed_at', 'is', null)
-    .order('date', { ascending: false }).limit(1).maybeSingle()
-
-  const showProgression = lastSession?.week_number === 4 && lastSession?.day_type === 'deadlift'
-
-  const { data: lastWeight } = await supabase
-    .from('body_weights')
-    .select('weight_kg')
+    .from('workout_sessions')
+    .select('day_type, week_number, cycle_number')
     .eq('user_id', user.id)
-    .order('date', { ascending: false })
+    .not('completed_at', 'is', null)
+    .order('completed_at', { ascending: false })
     .limit(1)
     .maybeSingle()
 
+  const next = getNextWorkout(lastSession ? {
+    dayType: lastSession.day_type,
+    weekNumber: lastSession.week_number,
+    cycleNumber: lastSession.cycle_number,
+  } : null)
+
+  const hasTMs = LIFTS.every(l => tms[l] != null)
+  const weekLabel = WEEK_LABELS[next.weekNumber] ?? `Неделя ${next.weekNumber}`
+
   return (
-    <div className="p-4 space-y-6">
-      <h1 className="text-2xl font-bold">Программа</h1>
+    <div className="p-4 space-y-6 pb-6">
+      <div>
+        <p className="text-gray-400 text-sm">{weekLabel} · Цикл {next.cycleNumber}</p>
+        <h1 className="text-2xl font-bold">Программа</h1>
+      </div>
 
-      {showProgression && (
-        <div className="bg-green-900/30 border border-green-700 rounded-2xl p-4 space-y-3">
-          <p className="text-green-400 font-semibold">Цикл завершён! 🎉</p>
-          <p className="text-gray-300 text-sm">Добавить прогрессию к максимумам?</p>
-          <form action={applyProgression}>
-            <button type="submit"
-              className="w-full bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl py-3 transition-colors">
-              Да — +5кг присед/становая, +2.5кг жим
-            </button>
-          </form>
-        </div>
-      )}
-
-      <div className="space-y-3">
-        <h2 className="text-gray-300 font-semibold">Тренировочные максимумы (TM)</h2>
+      <div className="bg-gray-900 rounded-2xl p-4 space-y-3">
+        <p className="text-sm font-semibold text-gray-300 mb-1">Тренировочные максимумы</p>
         {LIFTS.map(lift => (
-          <form key={lift} action={updateTM}
-            className="bg-gray-900 rounded-2xl p-4 flex items-center gap-3">
+          <form key={lift} action={updateTM} className="flex items-center gap-3">
             <input type="hidden" name="lift" value={lift} />
-            <span className="text-gray-300 flex-1 text-sm">{LIFT_LABELS[lift]}</span>
-            <input name="value" type="number" defaultValue={tms[lift] ?? ''} step="2.5"
-              inputMode="decimal" placeholder="кг"
-              className="bg-gray-800 text-white w-20 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <button type="submit"
-              className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl px-3 py-2 text-sm font-medium transition-colors">
-              ✓
+            <span className="text-gray-400 text-sm w-24 shrink-0">{LIFT_LABELS[lift]}</span>
+            <input
+              type="number"
+              name="value"
+              defaultValue={tms[lift] ?? ''}
+              step="2.5"
+              inputMode="decimal"
+              placeholder="0"
+              className="flex-1 bg-gray-800 text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              type="submit"
+              className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl px-4 py-2 transition-colors">
+              ОК
             </button>
           </form>
         ))}
       </div>
 
-      <div className="bg-gray-900 rounded-2xl p-4 space-y-1">
-        <p className="text-gray-400 text-xs font-semibold uppercase tracking-wide mb-2">Схема</p>
-        <p className="text-gray-300 text-sm">5/3/1 BBB · 3 дня · 4-недельные циклы</p>
-        <p className="text-gray-500 text-xs">Пн: Присед · Ср: Жим · Пт: Становая</p>
-        <p className="text-gray-500 text-xs">BBB: 5×10 @ 50% TM после основных сетов</p>
-      </div>
+      {!hasTMs && (
+        <p className="text-gray-500 text-sm text-center">Задай TM выше чтобы увидеть веса</p>
+      )}
 
-      <div className="space-y-3">
-        <h2 className="text-gray-300 font-semibold">Вес тела</h2>
-        <form action={logBodyWeight} className="bg-gray-900 rounded-2xl p-4 flex items-center gap-3">
-          <span className="text-gray-300 flex-1 text-sm">
-            {lastWeight ? `Последний: ${lastWeight.weight_kg} кг` : 'Не записан'}
-          </span>
-          <input name="weight" type="number" step="0.1" inputMode="decimal" placeholder="кг"
-            defaultValue={lastWeight?.weight_kg ?? ''}
-            className="bg-gray-800 text-white w-20 rounded-xl px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          <button type="submit"
-            className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl px-3 py-2 text-sm font-medium transition-colors">
-            ✓
-          </button>
-        </form>
-      </div>
+      {hasTMs && LIFTS.map(lift => {
+        const mainSets = getMainSets(tms[lift], next.weekNumber as 1 | 2 | 3 | 4)
+        const bbbLift = BBB_LIFT[lift]
+        const bbbTm = bbbLift === 'rdl' ? tms['deadlift'] : (tms[bbbLift as AnyLift] ?? tms[lift])
+        const bbbWeight = calcWeight(bbbTm, BBB_PCT)
+        const companion = BBB_COMPANION[lift]
+
+        return (
+          <div key={lift} className="bg-gray-900 rounded-2xl p-4 space-y-4">
+            <div>
+              <p className="text-gray-500 text-xs">{DAY_LABELS[lift]}</p>
+              <p className="font-bold text-lg">{LIFT_LABELS[lift]}</p>
+            </div>
+
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">База</p>
+              <div className="flex gap-2">
+                {mainSets.map((s, i) => (
+                  <div key={i} className="flex-1 bg-gray-800 rounded-xl p-2 text-center">
+                    <p className="text-white font-bold text-sm">{s.plannedWeight} кг</p>
+                    <p className="text-gray-500 text-xs">{s.plannedReps}{s.isAmrap ? '+' : ''} повт</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">BBB + суперсет</p>
+              <div className="bg-gray-800 rounded-xl p-3 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-300">{LIFT_LABELS[bbbLift]}</span>
+                  <span className="text-white font-semibold">{BBB_SETS}×{BBB_REPS} @ {bbbWeight} кг</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-blue-400">↔ {companion.name}</span>
+                  <span className="text-gray-400">{BBB_SETS}×{companion.reps}</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Аксессуары</p>
+              <div className="space-y-2">
+                {ACCESSORY_GROUPS[lift].map((group, i) => (
+                  <div key={i} className="bg-gray-800 rounded-xl p-3">
+                    {group.type === 'solo' ? (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-300">{group.item.name}</span>
+                        <span className="text-gray-400">{group.item.sets}×{group.item.reps}</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-300">{group.a.name}</span>
+                          <span className="text-gray-400">{group.a.sets}×{group.a.reps}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-blue-400">↔ {group.b.name}</span>
+                          <span className="text-gray-400">{group.b.sets}×{group.b.reps}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }

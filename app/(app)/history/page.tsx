@@ -2,6 +2,14 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { LIFT_LABELS, type AnyLift } from '@/lib/program/constants'
 
+function getExerciseLabel(exercise: string): string {
+  if (exercise.endsWith('_bbb')) {
+    const base = exercise.replace('_bbb', '') as AnyLift
+    return `${LIFT_LABELS[base] ?? base} (BBB)`
+  }
+  return LIFT_LABELS[exercise as AnyLift] ?? exercise
+}
+
 export default async function HistoryPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -41,7 +49,7 @@ export default async function HistoryPage() {
             <div className="space-y-1">
               {(session.sets as any[])?.slice(0, 4).map((s: any, i: number) => (
                 <div key={i} className="flex justify-between text-sm">
-                  <span className="text-gray-500">{s.exercise} · {s.set_number}</span>
+                  <span className="text-gray-500">{getExerciseLabel(s.exercise)} · {s.set_number}</span>
                   <span className="text-gray-300">{s.actual_weight_kg}кг × {s.actual_reps}{s.is_amrap ? ' ★' : ''}</span>
                 </div>
               ))}
