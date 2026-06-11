@@ -68,6 +68,9 @@ export const ACCESSORY_GROUPS: Record<Lift, AccessoryGroup[]> = {
     { type: 'superset',
       a: { name: 'Боковые дельты', sets: 3, reps: 15 },
       b: { name: 'Задние дельты', sets: 3, reps: 15 } },
+    { type: 'superset',
+      a: { name: 'Шраги', sets: 3, reps: 12 },
+      b: { name: 'Шея', sets: 2, reps: 15 } },
   ],
   deadlift: [
     { type: 'superset',
@@ -76,6 +79,7 @@ export const ACCESSORY_GROUPS: Record<Lift, AccessoryGroup[]> = {
     { type: 'superset',
       a: { name: 'Сгибания сидя', sets: 3, reps: 10 },
       b: { name: 'Разведения гантелями', sets: 3, reps: 12 } },
+    { type: 'solo', item: { name: 'Шея', sets: 2, reps: 15 } },
   ],
 }
 
