@@ -13,6 +13,35 @@ export default async function ProgressPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth')
 
+  const [{ data: firstSession }, { count: totalSessions }, { data: lastSession }] = await Promise.all([
+    supabase
+      .from('workout_sessions')
+      .select('date')
+      .eq('user_id', user.id)
+      .not('completed_at', 'is', null)
+      .order('date', { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('workout_sessions')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .not('completed_at', 'is', null),
+    supabase
+      .from('workout_sessions')
+      .select('cycle_number, week_number')
+      .eq('user_id', user.id)
+      .not('completed_at', 'is', null)
+      .order('completed_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ])
+
+  const firstDate = firstSession?.date ? new Date(firstSession.date) : null
+  const weeksTraining = firstDate
+    ? Math.floor((Date.now() - firstDate.getTime()) / (7 * 24 * 60 * 60 * 1000))
+    : 0
+
   const { data: amrapSets } = await supabase
     .from('sets')
     .select('exercise, estimated_1rm, workout_sessions!inner(date, user_id, day_type)')
@@ -53,6 +82,28 @@ export default async function ProgressPage() {
   return (
     <div className="p-4 space-y-4">
       <h1 className="text-2xl font-bold">Прогресс</h1>
+      {firstDate && (
+        <div className="bg-gray-900 rounded-2xl p-4">
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div>
+              <p className="text-3xl font-bold text-white">{weeksTraining}</p>
+              <p className="text-gray-400 text-xs mt-1">недель</p>
+              <p className="text-gray-600 text-xs">
+                с {firstDate.toLocaleDateString('ru', { day: 'numeric', month: 'short' })}
+              </p>
+            </div>
+            <div>
+              <p className="text-3xl font-bold text-white">{totalSessions ?? 0}</p>
+              <p className="text-gray-400 text-xs mt-1">тренировок</p>
+            </div>
+            <div>
+              <p className="text-3xl font-bold text-white">{lastSession?.cycle_number ?? 1}</p>
+              <p className="text-gray-400 text-xs mt-1">цикл</p>
+              <p className="text-gray-600 text-xs">неделя {lastSession?.week_number ?? 1}</p>
+            </div>
+          </div>
+        </div>
+      )}
       {LIFTS.map(({ key, label }) => (
         <LiftChart key={key} data={charts[key]} label={label} />
       ))}
