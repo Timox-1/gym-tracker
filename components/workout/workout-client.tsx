@@ -100,16 +100,22 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
     const w = parseFloat(weight) || 0
     const r = parseInt(reps) || 0
 
-    await saveSet({
-      sessionId,
-      exercise: current.exercise,
-      setNumber: current.setNumber,
-      plannedReps: current.plannedReps,
-      plannedWeightKg: current.plannedWeight,
-      actualReps: r,
-      actualWeightKg: w,
-      isAmrap: current.isAmrap,
-    })
+    try {
+      await saveSet({
+        sessionId,
+        exercise: current.exercise,
+        setNumber: current.setNumber,
+        plannedReps: current.plannedReps,
+        plannedWeightKg: current.plannedWeight,
+        actualReps: r,
+        actualWeightKg: w,
+        isAmrap: current.isAmrap,
+      })
+    } catch (e) {
+      console.error('saveSet error:', e)
+      setSaving(false)
+      return
+    }
 
     setSavedActuals(prev => ({ ...prev, [idx]: { weight: w, reps: r } }))
 
@@ -125,7 +131,7 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
     setSaving(false)
 
     if (idx === plan.length - 1) {
-      await completeWorkout(sessionId)
+      try { await completeWorkout(sessionId) } catch (e) { console.error('completeWorkout error:', e) }
       setPhase('done')
     } else {
       const next = plan[idx + 1]
@@ -153,7 +159,7 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
 
   async function handleEndEarly() {
     if (timerRef.current) clearInterval(timerRef.current)
-    await completeWorkout(sessionId)
+    try { await completeWorkout(sessionId) } catch (e) { console.error('completeWorkout error:', e) }
     setPhase('done')
   }
 
