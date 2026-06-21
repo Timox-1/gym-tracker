@@ -7,6 +7,7 @@ import {
 } from '@/lib/program/constants'
 import { calcWeight, getMainSets } from '@/lib/program/calculator'
 import { updateTM } from '@/app/actions/program'
+import { RepeatWeekButton } from '@/components/program/repeat-week-button'
 
 const DAY_LABELS: Record<Lift, string> = {
   squat: 'Понедельник',
@@ -56,6 +57,8 @@ export default async function ProgramPage() {
         <p className="text-gray-400 text-sm">{weekLabel} · Цикл {next.cycleNumber}</p>
         <h1 className="text-2xl font-bold">Программа</h1>
       </div>
+
+      <RepeatWeekButton weekNumber={next.weekNumber} cycleNumber={next.cycleNumber} />
 
       <div className="bg-gray-900 rounded-2xl p-4 space-y-3">
         <p className="text-sm font-semibold text-gray-300 mb-1">Тренировочные максимумы</p>
