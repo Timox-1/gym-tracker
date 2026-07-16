@@ -17,6 +17,18 @@ function formatTime(s: number): string {
   return `${m}:${(s % 60).toString().padStart(2, '0')}`
 }
 
+// Стартовый вес в поле ввода.
+// Главные сеты — строго по плану 5/3/1. Аксессуары — прошлый вес (плана нет).
+// BBB — прошлый рабочий вес, а не 50% от TM: расчётный почти всегда ниже
+// реального, и его приходилось перебивать руками каждую тренировку.
+function initialWeight(s: PlannedSet | undefined): string {
+  if (!s) return ''
+  if (s.isBBB && s.lastWeight != null) {
+    return String(Math.max(s.lastWeight, s.plannedWeight ?? 0))
+  }
+  return String(s.plannedWeight ?? s.lastWeight ?? '')
+}
+
 export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, historicalBest1RM }: {
   sessionId: string
   plan: PlannedSet[]
@@ -33,7 +45,7 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
 
   const router = useRouter()
   const [idx, setIdx] = useState(0)
-  const [weight, setWeight] = useState(String(plan[0]?.plannedWeight ?? plan[0]?.lastWeight ?? ''))
+  const [weight, setWeight] = useState(initialWeight(plan[0]))
   const [reps, setReps] = useState(String(plan[0]?.plannedReps ?? ''))
   const [saving, setSaving] = useState(false)
   const [phase, setPhase] = useState<'input' | 'rest' | 'done'>('input')
@@ -69,7 +81,7 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
     if (nextIdx >= plan.length) { setPhase('done'); return }
     const next = plan[nextIdx]
     setIdx(nextIdx)
-    setWeight(String(next.plannedWeight ?? next.lastWeight ?? ''))
+    setWeight(initialWeight(next))
     setReps(String(next.plannedReps))
     setAmrapRM(null)
     setPhase('input')
@@ -273,7 +285,7 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
             const prev = plan[prevIdx]
             const saved = savedActuals[prevIdx]
             setIdx(prevIdx)
-            setWeight(String(saved?.weight ?? prev.plannedWeight ?? prev.lastWeight ?? ''))
+            setWeight(saved ? String(saved.weight) : initialWeight(prev))
             setReps(String(saved?.reps ?? prev.plannedReps))
             setAmrapRM(null)
             setPhase('input')
@@ -405,7 +417,7 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
           const prev = plan[prevIdx]
           const saved = savedActuals[prevIdx]
           setIdx(prevIdx)
-          setWeight(String(saved?.weight ?? prev.plannedWeight ?? prev.lastWeight ?? ''))
+          setWeight(saved ? String(saved.weight) : initialWeight(prev))
           setReps(String(saved?.reps ?? prev.plannedReps))
           setAmrapRM(null)
         }} className="w-full text-gray-600 py-2 text-sm">

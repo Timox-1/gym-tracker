@@ -43,7 +43,9 @@ export function buildWorkoutPlan(
 
   // BBB sets — paired with companion exercise during rest
   const bbbLift = BBB_LIFT[dayType]
-  const bbbExercise = bbbLift === dayType ? `${bbbLift}_bbb` : bbbLift
+  // Всегда суффикс _bbb: иначе BBB-присед на дне становой пишется как 'squat'
+  // и сталкивается с рабочим приседом — история и хинт «прошлый раз» ломаются.
+  const bbbExercise = `${bbbLift}_bbb`
   const bbbTm = bbbLift === 'rdl' ? tms['deadlift'] : (tms[bbbLift] ?? tms[dayType])
   const companion = BBB_COMPANION[dayType]
   let groupId = 0
