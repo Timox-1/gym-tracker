@@ -48,12 +48,15 @@ export default async function WorkoutPage({ params }: { params: Promise<{ id: st
   const lastDataMap: Record<string, LastData> = {}
 
   if (historyExercises.length > 0) {
+    // skipped исключаем: у пропусков нет подходов, но они съедали бы слоты
+    // в лимите 5 — после пропущенной недели веса аксессуаров терялись бы.
     const { data: recentSessions } = await supabase
       .from('workout_sessions')
       .select('id')
       .eq('user_id', user.id)
       .neq('id', id)
       .not('completed_at', 'is', null)
+      .eq('skipped', false)
       .order('date', { ascending: false })
       .limit(5)
 

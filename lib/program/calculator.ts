@@ -1,14 +1,15 @@
 import { WEEK_SCHEMES, BBB_PCT, BBB_REPS, BBB_SETS } from './constants'
 
-export function roundToNearest(weight: number, nearest = 2.5): number {
-  const div = weight / nearest
-  const floored = Math.floor(div)
-  const remainder = div - floored
-  if (remainder >= 0.3) return Math.ceil(div) * nearest
-  return floored * nearest
+// Рабочие недели: округляем до ближайшего блина.
+// Раньше был Math.floor — систематически недогружал до 2.5 кг, сильнее всего
+// на AMRAP-сетах (становая нед. 3: 97.5 вместо 99.75).
+export function calcWeight(tm: number, pct: number, nearest = 2.5): number {
+  return Math.round((tm * pct) / nearest) * nearest
 }
 
-export function calcWeight(tm: number, pct: number, nearest = 2.5): number {
+// Делоад: округляем вниз. Неделя 4 нужна для разгрузки — если округлять
+// до ближайшего, она становится тяжелее, что противоречит её смыслу.
+export function calcDeloadWeight(tm: number, pct: number, nearest = 2.5): number {
   return Math.floor((tm * pct) / nearest) * nearest
 }
 
@@ -17,9 +18,10 @@ export function calcEstimated1RM(weight: number, reps: number): number {
 }
 
 export function getMainSets(tm: number, week: 1 | 2 | 3 | 4) {
+  const weigh = week === 4 ? calcDeloadWeight : calcWeight
   return WEEK_SCHEMES[week].map(({ reps, pct, isAmrap }) => ({
     plannedReps: reps,
-    plannedWeight: calcWeight(tm, pct),
+    plannedWeight: weigh(tm, pct),
     isAmrap,
   }))
 }

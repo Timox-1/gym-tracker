@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { startWorkout, skipWorkout } from '@/app/actions/workout'
+import { startWorkout, skipWorkout, skipWeek } from '@/app/actions/workout'
 
 export function TodayActions({ dayType, weekNumber, cycleNumber }: {
   dayType: string
@@ -8,6 +8,8 @@ export function TodayActions({ dayType, weekNumber, cycleNumber }: {
   cycleNumber: number
 }) {
   const [confirmSkip, setConfirmSkip] = useState(false)
+  const [confirmSkipWeek, setConfirmSkipWeek] = useState(false)
+  const isDeload = weekNumber === 4
 
   return (
     <div className="space-y-2">
@@ -30,6 +32,24 @@ export function TodayActions({ dayType, weekNumber, cycleNumber }: {
             Точно пропустить?
           </button>
         </form>
+      )}
+
+      {/* Только на делоаде: пропуск рабочей недели — не та привычка,
+          которую стоит поощрять кнопкой в один тап. */}
+      {isDeload && (
+        !confirmSkipWeek ? (
+          <button onClick={() => setConfirmSkipWeek(true)}
+            className="w-full py-3 text-sm text-gray-500 bg-gray-800 hover:bg-gray-700 rounded-xl transition-colors">
+            Пропустить всю разгрузку → цикл {cycleNumber + 1}
+          </button>
+        ) : (
+          <form action={skipWeek.bind(null, weekNumber, cycleNumber)}>
+            <button type="submit"
+              className="w-full py-3 text-sm text-yellow-400 bg-yellow-900/30 hover:bg-yellow-900/50 rounded-xl transition-colors">
+              Точно пропустить неделю целиком?
+            </button>
+          </form>
+        )
       )}
     </div>
   )

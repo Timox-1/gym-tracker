@@ -20,6 +20,7 @@ export default async function HistoryPage() {
     .select('id, date, day_type, week_number, cycle_number, sets(exercise, set_number, actual_weight_kg, actual_reps, is_amrap, estimated_1rm)')
     .eq('user_id', user.id)
     .not('completed_at', 'is', null)
+    .eq('skipped', false)
     .order('date', { ascending: false })
     .limit(20)
 

@@ -19,14 +19,19 @@ export default async function ProgressPage() {
       .select('date')
       .eq('user_id', user.id)
       .not('completed_at', 'is', null)
+      .eq('skipped', false)
       .order('date', { ascending: true })
       .limit(1)
       .maybeSingle(),
+    // Счётчик тренировок — только настоящие: пропуски завышали его.
     supabase
       .from('workout_sessions')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id)
-      .not('completed_at', 'is', null),
+      .not('completed_at', 'is', null)
+      .eq('skipped', false),
+    // Позиция в программе — наоборот, с учётом пропусков: если неделя
+    // пропущена, ты всё равно продвинулся по циклу.
     supabase
       .from('workout_sessions')
       .select('cycle_number, week_number')
@@ -63,6 +68,7 @@ export default async function ProgressPage() {
     .select('date, sets(actual_weight_kg, actual_reps)')
     .eq('user_id', user.id)
     .not('completed_at', 'is', null)
+    .eq('skipped', false)
     .order('date', { ascending: false })
     .limit(10)
 
