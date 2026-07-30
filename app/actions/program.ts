@@ -2,6 +2,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { LIFTS } from '@/lib/program/constants'
 
 export async function updateTM(formData: FormData) {
   const supabase = await createClient()
@@ -12,12 +13,45 @@ export async function updateTM(formData: FormData) {
   const value = parseFloat(formData.get('value') as string)
   if (isNaN(value) || value <= 0) return
 
-  await supabase.from('training_maxes').upsert(
+  const { error } = await supabase.from('training_maxes').upsert(
     { user_id: user.id, lift, value_kg: value, updated_at: new Date().toISOString() },
     { onConflict: 'user_id,lift' }
   )
+  if (error) throw new Error(error.message)
   revalidatePath('/program')
   revalidatePath('/today')
+}
+
+/** Сохраняет все заполненные TM одним сабмитом (онбординг + правка). */
+export async function updateAllTMs(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth')
+
+  const now = new Date().toISOString()
+  const rows = LIFTS.flatMap(lift => {
+    const value = parseFloat(formData.get(lift) as string)
+    if (isNaN(value) || value <= 0) return []
+    return [{ user_id: user.id, lift, value_kg: value, updated_at: now }]
+  })
+  if (rows.length === 0) return
+
+  const { error } = await supabase.from('training_maxes').upsert(rows, {
+    onConflict: 'user_id,lift',
+  })
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/program')
+  revalidatePath('/today')
+
+  const { data: saved } = await supabase
+    .from('training_maxes')
+    .select('lift')
+    .eq('user_id', user.id)
+    .in('lift', [...LIFTS])
+
+  const complete = LIFTS.every(l => (saved ?? []).some(r => r.lift === l))
+  if (complete) redirect('/today')
 }
 
 export async function applyProgression() {
@@ -46,10 +80,11 @@ export async function applyTMSuggestion(lift: string, newTM: number) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth')
 
-  await supabase.from('training_maxes').upsert(
+  const { error } = await supabase.from('training_maxes').upsert(
     { user_id: user.id, lift, value_kg: newTM, updated_at: new Date().toISOString() },
     { onConflict: 'user_id,lift' }
   )
+  if (error) throw new Error(error.message)
   revalidatePath('/program')
   revalidatePath('/today')
 }

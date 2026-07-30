@@ -44,9 +44,12 @@ export default async function TodayPage() {
       </div>
 
       {!hasTMs && (
-        <div className="bg-yellow-900/30 border border-yellow-700 rounded-2xl p-4">
+        <div className="bg-yellow-900/30 border border-yellow-700 rounded-2xl p-4 space-y-1">
           <p className="text-yellow-400 text-sm">
-            Сначала задай тренировочные максимумы в разделе ⚙️ Программа
+            Сначала задай все три максимума (присед, жим, становая) в ⚙️ Программа
+          </p>
+          <p className="text-yellow-600 text-xs">
+            Сейчас: {['squat', 'bench', 'deadlift'].filter(l => tms[l as AnyLift] != null).length}/3
           </p>
         </div>
       )}

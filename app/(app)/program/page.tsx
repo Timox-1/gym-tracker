@@ -6,7 +6,7 @@ import {
   BBB_SETS, BBB_REPS, BBB_PCT, type Lift, type AnyLift,
 } from '@/lib/program/constants'
 import { calcWeight, getMainSets } from '@/lib/program/calculator'
-import { updateTM } from '@/app/actions/program'
+import { updateAllTMs } from '@/app/actions/program'
 import { RepeatWeekButton } from '@/components/program/repeat-week-button'
 
 const DAY_LABELS: Record<Lift, string> = {
@@ -60,33 +60,36 @@ export default async function ProgramPage() {
 
       <RepeatWeekButton weekNumber={next.weekNumber} cycleNumber={next.cycleNumber} />
 
-      <div className="bg-gray-900 rounded-2xl p-4 space-y-3">
+      <form action={updateAllTMs} className="bg-gray-900 rounded-2xl p-4 space-y-3">
         <p className="text-sm font-semibold text-gray-300 mb-1">Тренировочные максимумы</p>
         {LIFTS.map(lift => (
-          <form key={lift} action={updateTM} className="flex items-center gap-3">
-            <input type="hidden" name="lift" value={lift} />
+          <div key={lift} className="flex items-center gap-3">
             <span className="text-gray-400 text-sm w-24 shrink-0">{LIFT_LABELS[lift]}</span>
             <input
               type="number"
-              name="value"
+              name={lift}
               defaultValue={tms[lift] ?? ''}
               step="2.5"
               inputMode="decimal"
-              placeholder="0"
+              placeholder="кг"
               className="flex-1 bg-gray-800 text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <button
-              type="submit"
-              className="shrink-0 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl w-10 h-10 flex items-center justify-center transition-colors">
-              ✓
-            </button>
-          </form>
+          </div>
         ))}
-      </div>
-
-      {!hasTMs && (
-        <p className="text-gray-500 text-sm text-center">Задай TM выше чтобы увидеть веса</p>
-      )}
+        <button
+          type="submit"
+          className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl py-3 text-sm transition-colors">
+          {hasTMs ? 'Сохранить' : 'Сохранить и начать'}
+        </button>
+        {!hasTMs && (
+          <p className="text-yellow-500/90 text-sm text-center">
+            Нужны все три. Сейчас: {LIFTS.filter(l => tms[l] != null).length}/3
+            {LIFTS.some(l => tms[l] != null) && (
+              <> · осталось: {LIFTS.filter(l => tms[l] == null).map(l => LIFT_LABELS[l]).join(', ')}</>
+            )}
+          </p>
+        )}
+      </form>
 
       {hasTMs && LIFTS.map(lift => {
         const mainSets = getMainSets(tms[lift], next.weekNumber as 1 | 2 | 3 | 4)
