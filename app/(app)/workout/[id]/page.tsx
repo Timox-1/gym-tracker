@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { buildWorkoutPlan } from '@/lib/program/workout-builder'
+import { pickLastExerciseData } from '@/lib/program/last-weights'
 import { WorkoutClient } from '@/components/workout/workout-client'
 import { LIFT_LABELS, type Lift, type AnyLift } from '@/lib/program/constants'
 import { redirect, notFound } from 'next/navigation'
@@ -42,48 +43,45 @@ export default async function WorkoutPage({ params }: { params: Promise<{ id: st
 
   const historicalBest1RM: number | null = bestSet ? Math.round((bestSet as any).estimated_1rm) : null
 
-  // Inject last-session weights for accessory and BBB exercises
+  // Прошлый вес аксессуаров/BBB — по упражнению из самой свежей сессии, где оно было.
+  // Не «последние N любых дней»: после отдыха/пропусков полная та же тренировка
+  // вылетала из окна, и поля весов становились пустыми со второй половины.
   const historyExercises = [...new Set(plan.filter(s => s.isAccessory || s.isBBB).map(s => s.exercise))]
-  type LastData = { weight: number; reps: number }
-  const lastDataMap: Record<string, LastData> = {}
+  let lastDataMap: Record<string, { weight: number; reps: number }> = {}
 
   if (historyExercises.length > 0) {
-    // skipped исключаем: у пропусков нет подходов, но они съедали бы слоты
-    // в лимите 5 — после пропущенной недели веса аксессуаров терялись бы.
-    const { data: recentSessions } = await supabase
-      .from('workout_sessions')
-      .select('id')
-      .eq('user_id', user.id)
-      .neq('id', id)
-      .not('completed_at', 'is', null)
-      .eq('skipped', false)
-      .order('date', { ascending: false })
-      .limit(5)
+    const { data: lastSets } = await supabase
+      .from('sets')
+      .select('exercise, actual_weight_kg, actual_reps, session_id, set_number, workout_sessions!inner(user_id, completed_at, skipped)')
+      .eq('workout_sessions.user_id', user.id)
+      .eq('workout_sessions.skipped', false)
+      .not('workout_sessions.completed_at', 'is', null)
+      .neq('session_id', id)
+      .in('exercise', historyExercises)
+      .not('actual_weight_kg', 'is', null)
+      .gt('actual_weight_kg', 0)
 
-    if (recentSessions && recentSessions.length > 0) {
-      const sessionIds = recentSessions.map((s: { id: string }) => s.id)
-      const { data: lastSets } = await supabase
-        .from('sets')
-        .select('exercise, actual_weight_kg, actual_reps, session_id')
-        .in('session_id', sessionIds)
-        .in('exercise', historyExercises)
-        .not('actual_weight_kg', 'is', null)
-        .gt('actual_weight_kg', 0)
-
-      if (lastSets) {
-        type SetRow = { exercise: string; actual_weight_kg: number; actual_reps: number; session_id: string }
-        for (const exercise of historyExercises) {
-          const exerciseSets = (lastSets as SetRow[]).filter(s => s.exercise === exercise)
-          for (const sessionId of sessionIds) {
-            const setsFromSession = exerciseSets.filter(s => s.session_id === sessionId)
-            if (setsFromSession.length > 0) {
-              const avgReps = Math.round(setsFromSession.reduce((sum, s) => sum + s.actual_reps, 0) / setsFromSession.length)
-              lastDataMap[exercise] = { weight: setsFromSession[0].actual_weight_kg, reps: avgReps }
-              break
-            }
-          }
-        }
+    if (lastSets) {
+      type SetRow = {
+        exercise: string
+        actual_weight_kg: number
+        actual_reps: number
+        session_id: string
+        set_number: number
+        workout_sessions: { completed_at: string } | { completed_at: string }[]
       }
+      const rows = (lastSets as SetRow[]).map(s => {
+        const ws = Array.isArray(s.workout_sessions) ? s.workout_sessions[0] : s.workout_sessions
+        return {
+          exercise: s.exercise,
+          actual_weight_kg: s.actual_weight_kg,
+          actual_reps: s.actual_reps,
+          session_id: s.session_id,
+          set_number: s.set_number,
+          completed_at: ws.completed_at,
+        }
+      })
+      lastDataMap = pickLastExerciseData(rows, historyExercises)
     }
   }
 
