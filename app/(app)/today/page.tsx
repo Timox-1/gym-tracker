@@ -36,6 +36,28 @@ export default async function TodayPage() {
   const plan = hasTMs ? buildWorkoutPlan(next.dayType as Lift, next.weekNumber, tms) : []
   const weekLabel = next.weekNumber === 4 ? 'Неделя 4 — Разгрузка' : `Неделя ${next.weekNumber}`
 
+  const { data: activeSession } = await supabase
+    .from('workout_sessions')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('day_type', next.dayType)
+    .eq('week_number', next.weekNumber)
+    .eq('cycle_number', next.cycleNumber)
+    .is('completed_at', null)
+    .eq('skipped', false)
+    .order('date', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  let savedSetCount = 0
+  if (activeSession) {
+    const { count } = await supabase
+      .from('sets')
+      .select('*', { count: 'exact', head: true })
+      .eq('session_id', activeSession.id)
+    savedSetCount = count ?? 0
+  }
+
   return (
     <div className="p-4 space-y-4">
       <div className="pt-2">
@@ -73,6 +95,9 @@ export default async function TodayPage() {
             dayType={next.dayType}
             weekNumber={next.weekNumber}
             cycleNumber={next.cycleNumber}
+            activeSessionId={activeSession?.id ?? null}
+            savedSetCount={savedSetCount}
+            planSetCount={plan.length}
           />
         </>
       )}

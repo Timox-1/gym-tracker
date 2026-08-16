@@ -9,6 +9,22 @@ export async function startWorkout(dayType: string, weekNumber: number, cycleNum
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth')
 
+  // Уже начатая незавершённая — не плодить дубликаты (PWA/«назад» на Сегодня).
+  const { data: existing } = await supabase
+    .from('workout_sessions')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('day_type', dayType)
+    .eq('week_number', weekNumber)
+    .eq('cycle_number', cycleNumber)
+    .is('completed_at', null)
+    .eq('skipped', false)
+    .order('date', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (existing) redirect(`/workout/${existing.id}`)
+
   const { data, error } = await supabase
     .from('workout_sessions')
     .insert({ user_id: user.id, day_type: dayType, week_number: weekNumber, cycle_number: cycleNumber })
@@ -29,6 +45,18 @@ export async function skipWorkout(dayType: string, weekNumber: number, cycleNumb
   if (!user) redirect('/auth')
 
   const today = new Date().toISOString().split('T')[0]
+
+  // Брошенная «в процессе» на этот же день — иначе orphan + путаница с «Продолжить».
+  await supabase
+    .from('workout_sessions')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('day_type', dayType)
+    .eq('week_number', weekNumber)
+    .eq('cycle_number', cycleNumber)
+    .is('completed_at', null)
+    .eq('skipped', false)
+
   const { error } = await supabase.from('workout_sessions').insert({
     user_id: user.id,
     day_type: dayType,

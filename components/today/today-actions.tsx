@@ -1,11 +1,15 @@
 'use client'
 import { useState } from 'react'
+import Link from 'next/link'
 import { startWorkout, skipWorkout, skipWeek } from '@/app/actions/workout'
 
-export function TodayActions({ dayType, weekNumber, cycleNumber }: {
+export function TodayActions({ dayType, weekNumber, cycleNumber, activeSessionId = null, savedSetCount = 0, planSetCount = 0 }: {
   dayType: string
   weekNumber: number
   cycleNumber: number
+  activeSessionId?: string | null
+  savedSetCount?: number
+  planSetCount?: number
 }) {
   const [confirmSkip, setConfirmSkip] = useState(false)
   const [confirmSkipWeek, setConfirmSkipWeek] = useState(false)
@@ -13,12 +17,26 @@ export function TodayActions({ dayType, weekNumber, cycleNumber }: {
 
   return (
     <div className="space-y-2">
-      <form action={startWorkout.bind(null, dayType, weekNumber, cycleNumber)}>
-        <button type="submit"
-          className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl py-5 text-xl transition-colors">
-          Начать тренировку
-        </button>
-      </form>
+      {activeSessionId ? (
+        <Link
+          href={`/workout/${activeSessionId}`}
+          className="block w-full bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl py-5 text-xl text-center transition-colors"
+        >
+          Продолжить тренировку
+          {planSetCount > 0 && (
+            <span className="block text-sm font-normal text-blue-100 mt-1">
+              {savedSetCount} / {planSetCount} сетов
+            </span>
+          )}
+        </Link>
+      ) : (
+        <form action={startWorkout.bind(null, dayType, weekNumber, cycleNumber)}>
+          <button type="submit"
+            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl py-5 text-xl transition-colors">
+            Начать тренировку
+          </button>
+        </form>
+      )}
 
       {!confirmSkip ? (
         <button onClick={() => setConfirmSkip(true)}

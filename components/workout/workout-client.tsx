@@ -29,13 +29,16 @@ function initialWeight(s: PlannedSet | undefined): string {
   return String(s.plannedWeight ?? s.lastWeight ?? '')
 }
 
-export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, historicalBest1RM }: {
+export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, historicalBest1RM, initialIdx = 0, initialSavedActuals = {}, startDone = false }: {
   sessionId: string
   plan: PlannedSet[]
   weekNumber: 1 | 2 | 3 | 4
   dayType: string
   mainTM: number
   historicalBest1RM: number | null
+  initialIdx?: number
+  initialSavedActuals?: Record<number, { weight: number; reps: number }>
+  startDone?: boolean
 }) {
   const AMRAP_TARGETS: Record<number, string> = {
     1: '5–8 повт',
@@ -43,17 +46,20 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
     3: '3–5 повт',
   }
 
+  const resumeIdx = Math.min(Math.max(initialIdx, 0), Math.max(plan.length - 1, 0))
+  const resumeSet = plan[resumeIdx]
+
   const router = useRouter()
-  const [idx, setIdx] = useState(0)
-  const [weight, setWeight] = useState(initialWeight(plan[0]))
-  const [reps, setReps] = useState(String(plan[0]?.plannedReps ?? ''))
+  const [idx, setIdx] = useState(resumeIdx)
+  const [weight, setWeight] = useState(initialWeight(resumeSet))
+  const [reps, setReps] = useState(String(resumeSet?.plannedReps ?? ''))
   const [saving, setSaving] = useState(false)
-  const [phase, setPhase] = useState<'input' | 'rest' | 'done'>('input')
+  const [phase, setPhase] = useState<'input' | 'rest' | 'done'>(startDone ? 'done' : 'input')
   const [amrapRM, setAmrapRM] = useState<number | null>(null)
   const [restSecs, setRestSecs] = useState(0)
   const [confirmEnd, setConfirmEnd] = useState(false)
   const [amrapReps, setAmrapReps] = useState<number | null>(null)
-  const [savedActuals, setSavedActuals] = useState<Record<number, { weight: number; reps: number }>>({})
+  const [savedActuals, setSavedActuals] = useState<Record<number, { weight: number; reps: number }>>(initialSavedActuals)
 
   const [tmSuggestion, setTmSuggestion] = useState<number | null>(null)
   const [tmApplied, setTmApplied] = useState(false)
@@ -67,6 +73,21 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
   useEffect(() => {
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [])
+
+  // Все сеты уже в БД, а completed_at ещё null — дожимаем завершение один раз.
+  useEffect(() => {
+    if (!startDone) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        await completeWorkout(sessionId)
+      } catch (e) {
+        console.error('completeWorkout on resume error:', e)
+      }
+      if (!cancelled) setPhase('done')
+    })()
+    return () => { cancelled = true }
+  }, [startDone, sessionId])
 
   useEffect(() => {
     if (phase === 'rest' && restSecs === 0 && advanceRef.current) {

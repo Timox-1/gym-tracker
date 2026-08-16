@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { buildWorkoutPlan } from '@/lib/program/workout-builder'
 import { pickLastExerciseData } from '@/lib/program/last-weights'
+import { buildResumeState } from '@/lib/program/resume'
 import { WorkoutClient } from '@/components/workout/workout-client'
 import { LIFT_LABELS, type Lift, type AnyLift } from '@/lib/program/constants'
 import { redirect, notFound } from 'next/navigation'
@@ -91,11 +92,23 @@ export default async function WorkoutPage({ params }: { params: Promise<{ id: st
       : s
   )
 
+  const { data: existingSets } = await supabase
+    .from('sets')
+    .select('exercise, set_number, actual_weight_kg, actual_reps')
+    .eq('session_id', id)
+
+  const resume = buildResumeState(planWithHistory, existingSets ?? [])
+
   return (
     <div>
       <div className="p-4 pb-0">
         <p className="text-gray-400 text-sm">Нед. {session.week_number} · Цикл {session.cycle_number}</p>
         <h1 className="text-xl font-bold">{LIFT_LABELS[session.day_type as Lift]}</h1>
+        {resume.initialIdx > 0 && !resume.allDone && (
+          <p className="text-blue-400 text-sm mt-1">
+            Продолжение · сет {resume.initialIdx + 1} из {planWithHistory.length}
+          </p>
+        )}
       </div>
       <WorkoutClient
           sessionId={id}
@@ -104,6 +117,9 @@ export default async function WorkoutPage({ params }: { params: Promise<{ id: st
           dayType={session.day_type}
           mainTM={mainTM}
           historicalBest1RM={historicalBest1RM}
+          initialIdx={resume.initialIdx}
+          initialSavedActuals={resume.savedActuals}
+          startDone={resume.allDone}
         />
     </div>
   )
