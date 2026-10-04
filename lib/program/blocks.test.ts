@@ -24,7 +24,7 @@ describe('planBlocks', () => {
       },
       { title: 'Подтягивания + Брусья', kind: 'work', id: 'g1' },
       { title: 'Молотки + Трицепс', kind: 'work', id: 'g2' },
-      { title: 'Подъём ног в висе', kind: 'work', id: 'solo-27' },
+      { title: 'Шраги за спиной + Подъём ног в висе', kind: 'work', id: 'g3' },
     ])
   })
 
@@ -45,6 +45,12 @@ describe('planBlocks', () => {
     const pullUps = slice.filter(s => s.exercise === 'Подтягивания')
     expect(pullUps).toHaveLength(5)
     expect(slice.filter(s => s.exercise === 'Брусья')).toHaveLength(3)
+  })
+
+  it('шраги за спиной стартуют с 30 кг, пока нет прошлого веса', () => {
+    const shrugs = plan.filter(s => s.exercise === 'Шраги за спиной')
+    expect(shrugs).toHaveLength(3)
+    expect(shrugs.every(s => s.plannedWeight === 30)).toBe(true)
   })
 
   it('блоки покрывают каждый индекс ровно один раз по порядку', () => {

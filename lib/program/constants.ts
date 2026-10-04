@@ -43,7 +43,7 @@ export const BBB_LIFT: Record<Lift, AnyLift> = {
   deadlift: 'squat',
 }
 
-export type AccessoryItem = { name: string; sets: number; reps: number }
+export type AccessoryItem = { name: string; sets: number; reps: number; weight?: number }
 export type AccessoryGroup =
   | { type: 'solo'; item: AccessoryItem }
   | { type: 'superset'; a: AccessoryItem; b: AccessoryItem }
@@ -56,7 +56,9 @@ export const ACCESSORY_GROUPS: Record<Lift, AccessoryGroup[]> = {
     { type: 'superset',
       a: { name: 'Молотки', sets: 3, reps: 10 },
       b: { name: 'Трицепс', sets: 3, reps: 10 } },
-    { type: 'solo', item: { name: 'Подъём ног в висе', sets: 3, reps: 15 } },
+    { type: 'superset',
+      a: { name: 'Шраги за спиной', sets: 3, reps: 12, weight: 30 },
+      b: { name: 'Подъём ног в висе', sets: 3, reps: 15 } },
   ],
   bench: [
     { type: 'superset',
