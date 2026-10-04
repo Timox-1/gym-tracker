@@ -5,7 +5,7 @@ export type AnyLift = Lift | 'ohp' | 'rdl'
 export type BbbCompanion = { name: string; reps: number }
 
 export const BBB_COMPANION: Record<Lift, BbbCompanion> = {
-  squat: { name: 'Икры', reps: 12 },
+  squat: { name: 'Разгибания ног', reps: 12 },
   bench: { name: 'Тяга к лицу', reps: 15 },
   deadlift: { name: 'Икры', reps: 12 },
 }
@@ -78,7 +78,7 @@ export const ACCESSORY_GROUPS: Record<Lift, AccessoryGroup[]> = {
       b: { name: 'Пресс', sets: 3, reps: 15 } },
     { type: 'superset',
       a: { name: 'Сгибания сидя', sets: 3, reps: 10 },
-      b: { name: 'Разведения гантелями', sets: 3, reps: 12 } },
+      b: { name: 'Разведения', sets: 3, reps: 12 } },
     { type: 'solo', item: { name: 'Шея', sets: 2, reps: 15 } },
   ],
 }
