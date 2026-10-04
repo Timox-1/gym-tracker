@@ -9,17 +9,26 @@ export function buildResumeState(
 } {
   const savedActuals: Record<number, { weight: number; reps: number }> = {}
   let initialIdx = 0
+  let foundGap = false
 
   for (let i = 0; i < plan.length; i++) {
     const match = saved.find(
       s => s.exercise === plan[i].exercise && s.set_number === plan[i].setNumber,
     )
-    if (!match) break
+    if (!match) {
+      if (!foundGap) {
+        initialIdx = i
+        foundGap = true
+      }
+      continue
+    }
     savedActuals[i] = {
       weight: Number(match.actual_weight_kg),
       reps: match.actual_reps,
     }
-    initialIdx = i + 1
+    if (!foundGap) {
+      initialIdx = i + 1
+    }
   }
 
   const allDone = initialIdx >= plan.length && plan.length > 0

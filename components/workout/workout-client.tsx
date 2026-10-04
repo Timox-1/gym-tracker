@@ -3,7 +3,11 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { saveSet, completeWorkout } from '@/app/actions/sets'
 import { calcEstimated1RM } from '@/lib/program/calculator'
+import { planBlocks } from '@/lib/program/blocks'
+import { nextIndex } from '@/lib/program/next-index'
+import { shouldSuggestIncrease, suggestedWeight } from '@/lib/program/set-weight'
 import type { PlannedSet } from '@/lib/program/workout-builder'
+import { PlanSheet } from '@/components/workout/plan-sheet'
 import { applyTMSuggestion } from '@/app/actions/program'
 
 function getRestSeconds(set: PlannedSet): number {
@@ -23,10 +27,8 @@ function formatTime(s: number): string {
 // реального, и его приходилось перебивать руками каждую тренировку.
 function initialWeight(s: PlannedSet | undefined): string {
   if (!s) return ''
-  if (s.isBBB && s.lastWeight != null) {
-    return String(Math.max(s.lastWeight, s.plannedWeight ?? 0))
-  }
-  return String(s.plannedWeight ?? s.lastWeight ?? '')
+  const w = suggestedWeight(s)
+  return w == null ? '' : String(w)
 }
 
 export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, historicalBest1RM, initialIdx = 0, initialSavedActuals = {}, startDone = false }: {
@@ -63,12 +65,35 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
 
   const [tmSuggestion, setTmSuggestion] = useState<number | null>(null)
   const [tmApplied, setTmApplied] = useState(false)
+  const [planOpen, setPlanOpen] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const advanceRef = useRef(false)
+  // true только после «Делать сейчас» или если в базе уже есть дырка.
+  // Пока false — переход строго idx+1, как раньше.
+  const skipSavedRef = useRef(
+    Object.keys(initialSavedActuals).some(k => Number(k) > resumeIdx),
+  )
 
   const current = plan[idx]
   const nextSet = idx + 1 < plan.length ? plan[idx + 1] : null
   const progress = Math.round((idx / plan.length) * 100)
+  const mainBlock = planBlocks(plan).find(b => b.kind === 'main')
+  let mainDone = true
+  if (mainBlock) {
+    for (let i = mainBlock.start; i < mainBlock.end; i++) {
+      if (savedActuals[i] == null) mainDone = false
+    }
+  }
+  const planLayer = planOpen ? (
+    <PlanSheet
+      plan={plan}
+      saved={savedActuals}
+      currentIdx={idx}
+      canJump={mainDone}
+      onClose={() => setPlanOpen(false)}
+      onJump={jumpToBlock}
+    />
+  ) : null
 
   useEffect(() => {
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
@@ -96,10 +121,8 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
     }
   })
 
-  function goToNext() {
+  function landOn(nextIdx: number) {
     if (timerRef.current) clearInterval(timerRef.current)
-    const nextIdx = idx + 1
-    if (nextIdx >= plan.length) { setPhase('done'); return }
     const next = plan[nextIdx]
     setIdx(nextIdx)
     setWeight(initialWeight(next))
@@ -107,6 +130,37 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
     setAmrapRM(null)
     setPhase('input')
     setConfirmEnd(false)
+    setPlanOpen(false)
+  }
+
+  function goToNext() {
+    if (!skipSavedRef.current) {
+      const nextIdx = idx + 1
+      if (nextIdx >= plan.length) { setPhase('done'); return }
+      landOn(nextIdx)
+      return
+    }
+
+    const block = planBlocks(plan).find(b => idx >= b.start && idx < b.end)
+      ?? { start: idx, end: idx + 1 }
+    const saved = new Set<number>(Object.keys(savedActuals).map(Number))
+    const nextIdx = nextIndex(plan.length, idx, block, saved)
+    if (nextIdx == null) {
+      completeWorkout(sessionId).catch(e => console.error('completeWorkout error:', e))
+      setPhase('done')
+      setPlanOpen(false)
+      return
+    }
+    landOn(nextIdx)
+  }
+
+  function jumpToBlock(block: { start: number; end: number }) {
+    skipSavedRef.current = true
+    let target = block.start
+    for (let i = block.start; i < block.end; i++) {
+      if (savedActuals[i] == null) { target = i; break }
+    }
+    landOn(target)
   }
 
   function startTimer(seconds: number) {
@@ -163,12 +217,13 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
     }
     setSaving(false)
 
-    if (idx === plan.length - 1) {
+    if (idx === plan.length - 1 && !skipSavedRef.current) {
       try { await completeWorkout(sessionId) } catch (e) { console.error('completeWorkout error:', e) }
       setPhase('done')
     } else {
       const next = plan[idx + 1]
       const isSuperset =
+        !!next &&
         current.supersetGroupId !== null &&
         next.supersetGroupId === current.supersetGroupId &&
         current.supersetRole === 'a' &&
@@ -182,7 +237,7 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
   }
 
   async function handleSkip() {
-    if (idx === plan.length - 1) {
+    if (idx === plan.length - 1 && !skipSavedRef.current) {
       await completeWorkout(sessionId)
       setPhase('done')
     } else {
@@ -262,11 +317,15 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
 
   // REST
   if (phase === 'rest') {
+    const nextKg = nextSet ? suggestedWeight(nextSet) : null
     return (
       <div className="p-4 space-y-4">
         <div className="h-1 bg-gray-800 rounded-full">
           <div className="h-1 bg-blue-500 rounded-full" style={{ width: `${progress}%` }} />
         </div>
+        <button onClick={() => setPlanOpen(true)} className="w-full text-gray-500 text-sm py-1">
+          Весь план
+        </button>
 
         {amrapRM && (
           <div className="bg-green-900/30 border border-green-700 rounded-xl p-3 text-center">
@@ -288,9 +347,17 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
             <p className="text-white font-semibold">{nextSet.exerciseLabel}</p>
             <p className="text-gray-400 text-sm">
               Сет {nextSet.setNumber}
-              {nextSet.plannedWeight != null ? ` · ${nextSet.plannedWeight}кг` : ''}
+              {nextKg != null ? ` · ${nextKg} кг` : ''}
               {' × '}{nextSet.plannedReps}{nextSet.isAmrap ? '+' : ''}
             </p>
+            {(nextSet.isAccessory || nextSet.isBBB) && nextSet.lastWeight != null && (
+              <p className="text-gray-500 text-xs mt-1">
+                прошлый раз: {nextSet.lastWeight} кг × {nextSet.lastReps ?? '?'} повт.
+                {shouldSuggestIncrease(nextSet) && (
+                  <span className="text-yellow-500"> → попробуй добавить вес</span>
+                )}
+              </p>
+            )}
           </div>
         )}
 
@@ -327,6 +394,7 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
             Точно завершить?
           </button>
         )}
+        {planLayer}
       </div>
     )
   }
@@ -337,7 +405,12 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
       <div className="h-1 bg-gray-800 rounded-full">
         <div className="h-1 bg-blue-500 rounded-full transition-all" style={{ width: `${progress}%` }} />
       </div>
-      <p className="text-gray-400 text-sm">{idx + 1} / {plan.length}</p>
+      <div className="flex items-center justify-between">
+        <p className="text-gray-400 text-sm">{idx + 1} / {plan.length}</p>
+        <button onClick={() => setPlanOpen(true)} className="text-gray-500 text-sm">
+          Весь план
+        </button>
+      </div>
 
       <div className="bg-gray-900 rounded-2xl p-5 space-y-4">
         <div>
@@ -356,7 +429,7 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
           {(current.isAccessory || current.isBBB) && current.lastWeight != null && (
             <p className="text-gray-500 text-xs mt-1">
               прошлый раз: {current.lastWeight} кг × {current.lastReps ?? '?'} повт.
-              {current.lastReps != null && current.lastReps > current.plannedReps && (
+              {shouldSuggestIncrease(current) && (
                 <span className="text-yellow-500 ml-1">→ попробуй добавить вес</span>
               )}
             </p>
@@ -445,6 +518,7 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
           ← Назад
         </button>
       )}
+      {planLayer}
     </div>
   )
 }

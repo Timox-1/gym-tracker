@@ -36,7 +36,10 @@ describe('buildResumeState', () => {
       { exercise: 'deadlift', set_number: 1, actual_weight_kg: 67.5, actual_reps: 5 },
       { exercise: 'deadlift', set_number: 3, actual_weight_kg: 90, actual_reps: 8 },
     ]
-    expect(buildResumeState(plan, saved).initialIdx).toBe(1)
+    const state = buildResumeState(plan, saved)
+    expect(state.initialIdx).toBe(1)
+    expect(state.savedActuals[0]).toEqual({ weight: 67.5, reps: 5 })
+    expect(state.savedActuals[2]).toEqual({ weight: 90, reps: 8 })
   })
 
   it('помечает allDone, если все сеты сохранены', () => {

@@ -1,8 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { getNextWorkout } from '@/lib/program/schedule'
 import { buildWorkoutPlan } from '@/lib/program/workout-builder'
+import { pickLastExerciseData } from '@/lib/program/last-weights'
 import { LIFT_LABELS, type Lift, type AnyLift } from '@/lib/program/constants'
 import { TodayActions } from '@/components/today/today-actions'
+import { TodayPlanButton } from '@/components/today/today-plan-button'
 import { redirect } from 'next/navigation'
 
 export default async function TodayPage() {
@@ -34,6 +36,47 @@ export default async function TodayPage() {
   const hasTMs = ['squat', 'bench', 'deadlift'].every(l => tms[l as AnyLift] != null)
 
   const plan = hasTMs ? buildWorkoutPlan(next.dayType as Lift, next.weekNumber, tms) : []
+  const historyExercises = [...new Set(plan.filter(s => s.isAccessory || s.isBBB).map(s => s.exercise))]
+  let lastDataMap: Record<string, { weight: number; reps: number }> = {}
+  if (historyExercises.length > 0) {
+    const { data: lastSets } = await supabase
+      .from('sets')
+      .select('exercise, actual_weight_kg, actual_reps, session_id, set_number, workout_sessions!inner(user_id, completed_at, skipped)')
+      .eq('workout_sessions.user_id', user.id)
+      .eq('workout_sessions.skipped', false)
+      .not('workout_sessions.completed_at', 'is', null)
+      .in('exercise', historyExercises)
+      .not('actual_weight_kg', 'is', null)
+      .gt('actual_weight_kg', 0)
+
+    if (lastSets) {
+      type SetRow = {
+        exercise: string
+        actual_weight_kg: number
+        actual_reps: number
+        session_id: string
+        set_number: number
+        workout_sessions: { completed_at: string } | { completed_at: string }[]
+      }
+      const rows = (lastSets as SetRow[]).map(s => {
+        const ws = Array.isArray(s.workout_sessions) ? s.workout_sessions[0] : s.workout_sessions
+        return {
+          exercise: s.exercise,
+          actual_weight_kg: s.actual_weight_kg,
+          actual_reps: s.actual_reps,
+          session_id: s.session_id,
+          set_number: s.set_number,
+          completed_at: ws.completed_at,
+        }
+      })
+      lastDataMap = pickLastExerciseData(rows, historyExercises)
+    }
+  }
+  const planDetailed = plan.map(s =>
+    (s.isAccessory || s.isBBB) && lastDataMap[s.exercise] != null
+      ? { ...s, lastWeight: lastDataMap[s.exercise].weight, lastReps: lastDataMap[s.exercise].reps }
+      : s
+  )
   const weekLabel = next.weekNumber === 4 ? 'Неделя 4 — Разгрузка' : `Неделя ${next.weekNumber}`
 
   const { data: activeSession } = await supabase
@@ -91,6 +134,7 @@ export default async function TodayPage() {
               <p className="text-gray-500 text-sm text-center">...ещё {plan.length - 8} сетов</p>
             )}
           </div>
+          <TodayPlanButton plan={planDetailed} />
           <TodayActions
             dayType={next.dayType}
             weekNumber={next.weekNumber}
