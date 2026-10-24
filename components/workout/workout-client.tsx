@@ -3,18 +3,15 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { saveSet, completeWorkout } from '@/app/actions/sets'
 import { calcEstimated1RM } from '@/lib/program/calculator'
+import { AMRAP_TARGETS, getAmrapFeedback } from '@/lib/program/amrap'
 import { planBlocks } from '@/lib/program/blocks'
 import { nextIndex } from '@/lib/program/next-index'
+import { getRestSeconds, isImmediateSupersetNext } from '@/lib/program/rest'
 import { shouldSuggestIncrease, suggestedWeight } from '@/lib/program/set-weight'
+import { formatPlannedReps } from '@/lib/program/workout-builder'
 import type { PlannedSet } from '@/lib/program/workout-builder'
 import { PlanSheet } from '@/components/workout/plan-sheet'
 import { applyTMSuggestion } from '@/app/actions/program'
-
-function getRestSeconds(set: PlannedSet): number {
-  if (set.isAccessory) return 90
-  if (set.exerciseLabel.includes('BBB')) return 120
-  return 180
-}
 
 function formatTime(s: number): string {
   const m = Math.floor(s / 60)
@@ -42,12 +39,6 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
   initialSavedActuals?: Record<number, { weight: number; reps: number }>
   startDone?: boolean
 }) {
-  const AMRAP_TARGETS: Record<number, string> = {
-    1: '5–8 повт',
-    2: '3–6 повт',
-    3: '3–5 повт',
-  }
-
   const resumeIdx = Math.min(Math.max(initialIdx, 0), Math.max(plan.length - 1, 0))
   const resumeSet = plan[resumeIdx]
 
@@ -60,10 +51,10 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
   const [amrapRM, setAmrapRM] = useState<number | null>(null)
   const [restSecs, setRestSecs] = useState(0)
   const [confirmEnd, setConfirmEnd] = useState(false)
-  const [amrapReps, setAmrapReps] = useState<number | null>(null)
   const [savedActuals, setSavedActuals] = useState<Record<number, { weight: number; reps: number }>>(initialSavedActuals)
 
-  const [tmSuggestion, setTmSuggestion] = useState<number | null>(null)
+  const amrapFeedback = getAmrapFeedback(plan, savedActuals, weekNumber, mainTM)
+  const { tmSuggestion } = amrapFeedback
   const [tmApplied, setTmApplied] = useState(false)
   const [planOpen, setPlanOpen] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -209,11 +200,6 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
     if (current.isAmrap && r > 0) {
       const rm = calcEstimated1RM(w, r)
       setAmrapRM(rm)
-      setAmrapReps(r)
-      if (weekNumber === 3 && (r < 3 || r > 8)) {
-        const suggested = Math.round((rm * 0.9) / 2.5) * 2.5
-        if (Math.abs(suggested - mainTM) >= 5) setTmSuggestion(suggested)
-      }
     }
     setSaving(false)
 
@@ -222,12 +208,7 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
       setPhase('done')
     } else {
       const next = plan[idx + 1]
-      const isSuperset =
-        !!next &&
-        current.supersetGroupId !== null &&
-        next.supersetGroupId === current.supersetGroupId &&
-        current.supersetRole === 'a' &&
-        next.supersetRole === 'b'
+      const isSuperset = isImmediateSupersetNext(current, next)
       if (isSuperset) {
         goToNext()
       } else {
@@ -253,6 +234,7 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
 
   // DONE
   if (phase === 'done') {
+    const amrapRM = amrapFeedback.rm
     const isPR = amrapRM !== null && historicalBest1RM !== null && amrapRM > historicalBest1RM
     const isFirstPR = amrapRM !== null && historicalBest1RM === null
     const totalVolume = Math.round(
@@ -276,13 +258,17 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
           </div>
         )}
 
+        {amrapFeedback.checkTM && (
+          <p className="text-yellow-400 text-sm max-w-sm">
+            Вышло 0 повт — проверь технику, восстановление и ТМ. Один подход не доказывает, что ТМ завышен.
+          </p>
+        )}
+
         {tmSuggestion && !tmApplied && (
           <div className="bg-yellow-900/30 border border-yellow-700 rounded-xl p-4 w-full max-w-sm text-left">
             <p className="text-yellow-400 text-sm font-semibold">Рекомендация по ТМ</p>
             <p className="text-gray-300 text-sm mt-1">
-              {amrapReps && amrapReps > 8
-                ? `Вышло ${amrapReps} повт — ТМ занижен.`
-                : `Вышло ${amrapReps} повт — ТМ завышен.`}
+              {`Вышло ${amrapFeedback.reps} повт — ТМ может быть занижен.`}
               {' '}Рекомендую: <span className="text-white font-bold">{tmSuggestion} кг</span> (сейчас {mainTM} кг)
             </p>
             <button
@@ -348,7 +334,7 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
             <p className="text-gray-400 text-sm">
               Сет {nextSet.setNumber}
               {nextKg != null ? ` · ${nextKg} кг` : ''}
-              {' × '}{nextSet.plannedReps}{nextSet.isAmrap ? '+' : ''}
+              {' × '}{formatPlannedReps(nextSet)}{nextSet.isAmrap ? '+' : ''}
             </p>
             {(nextSet.isAccessory || nextSet.isBBB) && nextSet.lastWeight != null && (
               <p className="text-gray-500 text-xs mt-1">
@@ -440,7 +426,7 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
           <label className="text-gray-400 text-sm block mb-1">
             {current.isAmrap
               ? `Повторения — цель: ${AMRAP_TARGETS[weekNumber] ?? '1–5 повт'}`
-              : `Повторения (план: ${current.plannedReps})`}
+              : `Повторения (план: ${formatPlannedReps(current)})`}
           </label>
           <input type="number" value={reps} onChange={e => setReps(e.target.value)}
             inputMode="numeric"
@@ -463,7 +449,7 @@ export function WorkoutClient({ sessionId, plan, weekNumber, dayType, mainTM, hi
             {nextSet.exerciseLabel} · Сет {nextSet.setNumber}
           </p>
           <p className="text-gray-500 text-xs">
-            × {nextSet.plannedReps}
+            × {formatPlannedReps(nextSet)}
           </p>
         </div>
       )}

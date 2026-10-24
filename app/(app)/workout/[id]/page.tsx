@@ -48,7 +48,7 @@ export default async function WorkoutPage({ params }: { params: Promise<{ id: st
   // Не «последние N любых дней»: после отдыха/пропусков полная та же тренировка
   // вылетала из окна, и поля весов становились пустыми со второй половины.
   const historyExercises = [...new Set(plan.filter(s => s.isAccessory || s.isBBB).map(s => s.exercise))]
-  let lastDataMap: Record<string, { weight: number; reps: number }> = {}
+  let lastDataMap: ReturnType<typeof pickLastExerciseData> = {}
 
   if (historyExercises.length > 0) {
     const { data: lastSets } = await supabase
@@ -82,13 +82,16 @@ export default async function WorkoutPage({ params }: { params: Promise<{ id: st
           completed_at: ws.completed_at,
         }
       })
-      lastDataMap = pickLastExerciseData(rows, historyExercises)
+      lastDataMap = pickLastExerciseData(rows, historyExercises, Object.fromEntries(historyExercises.map(exercise => {
+        const sets = plan.filter(s => s.exercise === exercise)
+        return [exercise, { sets: sets.length, reps: sets[0].plannedRepsMax ?? (sets[0].plannedReps + (sets[0].isBBB ? 0 : 1)) }]
+      })))
     }
   }
 
   const planWithHistory = plan.map(s =>
     (s.isAccessory || s.isBBB) && lastDataMap[s.exercise] != null
-      ? { ...s, lastWeight: lastDataMap[s.exercise].weight, lastReps: lastDataMap[s.exercise].reps }
+      ? { ...s, lastWeight: lastDataMap[s.exercise].weight, lastReps: lastDataMap[s.exercise].reps, increaseReady: lastDataMap[s.exercise].increaseReady }
       : s
   )
 

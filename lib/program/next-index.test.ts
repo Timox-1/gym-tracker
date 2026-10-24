@@ -33,7 +33,7 @@ describe('nextIndex', () => {
     expect(nextIndex(planLength, last, wholeBlock, savedThrough(last))).toBeNull()
   })
 
-  it('после BBB: возврат к пропущенному базовому подходу, не к следующему блоку', () => {
+  it('после выпадов: возврат к пропущенному базовому подходу, не к следующему блоку', () => {
     const bbb = blocks.find(b => b.id === 'g0')!
     const idx = bbb.end - 1
     const saved = new Set<number>([0])

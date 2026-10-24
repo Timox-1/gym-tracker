@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getNextWorkout } from '@/lib/program/schedule'
-import { buildWorkoutPlan } from '@/lib/program/workout-builder'
+import { buildWorkoutPlan, formatPlannedReps } from '@/lib/program/workout-builder'
 import { pickLastExerciseData } from '@/lib/program/last-weights'
 import { LIFT_LABELS, type Lift, type AnyLift } from '@/lib/program/constants'
 import { TodayActions } from '@/components/today/today-actions'
@@ -37,7 +37,7 @@ export default async function TodayPage() {
 
   const plan = hasTMs ? buildWorkoutPlan(next.dayType as Lift, next.weekNumber, tms) : []
   const historyExercises = [...new Set(plan.filter(s => s.isAccessory || s.isBBB).map(s => s.exercise))]
-  let lastDataMap: Record<string, { weight: number; reps: number }> = {}
+  let lastDataMap: ReturnType<typeof pickLastExerciseData> = {}
   if (historyExercises.length > 0) {
     const { data: lastSets } = await supabase
       .from('sets')
@@ -69,12 +69,15 @@ export default async function TodayPage() {
           completed_at: ws.completed_at,
         }
       })
-      lastDataMap = pickLastExerciseData(rows, historyExercises)
+      lastDataMap = pickLastExerciseData(rows, historyExercises, Object.fromEntries(historyExercises.map(exercise => {
+        const sets = plan.filter(s => s.exercise === exercise)
+        return [exercise, { sets: sets.length, reps: sets[0].plannedRepsMax ?? (sets[0].plannedReps + (sets[0].isBBB ? 0 : 1)) }]
+      })))
     }
   }
   const planDetailed = plan.map(s =>
     (s.isAccessory || s.isBBB) && lastDataMap[s.exercise] != null
-      ? { ...s, lastWeight: lastDataMap[s.exercise].weight, lastReps: lastDataMap[s.exercise].reps }
+      ? { ...s, lastWeight: lastDataMap[s.exercise].weight, lastReps: lastDataMap[s.exercise].reps, increaseReady: lastDataMap[s.exercise].increaseReady }
       : s
   )
   const weekLabel = next.weekNumber === 4 ? 'Неделя 4 — Разгрузка' : `Неделя ${next.weekNumber}`
@@ -126,7 +129,7 @@ export default async function TodayPage() {
               <div key={i} className="bg-gray-900 rounded-xl px-4 py-3 flex justify-between">
                 <span className="text-gray-400 text-sm">{s.exerciseLabel} · {s.setNumber}</span>
                 <span className="font-semibold text-sm">
-                  {s.plannedWeight != null ? `${s.plannedWeight}кг × ` : ''}{s.plannedReps}{s.isAmrap ? '+' : ''}
+                  {s.plannedWeight != null ? `${s.plannedWeight}кг × ` : ''}{formatPlannedReps(s)}{s.isAmrap ? '+' : ''}
                 </span>
               </div>
             ))}

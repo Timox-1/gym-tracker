@@ -3,6 +3,7 @@
 import { planBlocks, type PlanBlock } from '@/lib/program/blocks'
 import { suggestedWeight } from '@/lib/program/set-weight'
 import type { PlannedSet } from '@/lib/program/workout-builder'
+import { formatPlannedReps } from '@/lib/program/workout-builder'
 
 export function PlanSheet({
   plan,
@@ -55,7 +56,7 @@ export function PlanSheet({
                       {done ? '✓ ' : ''}{s.exerciseLabel} · {s.setNumber}
                     </span>
                     <span className={done ? 'text-gray-600' : 'text-gray-200'}>
-                      {kg != null ? `${kg} кг × ` : '× '}{s.plannedReps}{s.isAmrap ? '+' : ''}
+                      {kg != null ? `${kg} кг × ` : '× '}{formatPlannedReps(s)}{s.isAmrap ? '+' : ''}
                     </span>
                   </div>
                 )

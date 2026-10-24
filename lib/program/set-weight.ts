@@ -11,9 +11,7 @@ export function suggestedWeight(s: PlannedSet): number | null {
   return s.plannedWeight
 }
 
-/** Прошлый раз перекрыл план по повторам — есть смысл добавить вес. */
+/** Прибавка только после проверки всех подходов последней сессии на одном весе. */
 export function shouldSuggestIncrease(s: PlannedSet): boolean {
-  return (s.isAccessory || s.isBBB)
-    && s.lastReps != null
-    && s.lastReps > s.plannedReps
+  return (s.isAccessory || s.isBBB) && s.increaseReady === true
 }

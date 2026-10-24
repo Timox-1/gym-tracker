@@ -47,8 +47,8 @@ describe('suggestedWeight', () => {
 })
 
 describe('shouldSuggestIncrease', () => {
-  it('предлагает добавить, если повторов больше плана', () => {
-    expect(shouldSuggestIncrease(set({ lastReps: 11, plannedReps: 10 }))).toBe(true)
+  it('предлагает добавить только после проверки всех подходов', () => {
+    expect(shouldSuggestIncrease(set({ increaseReady: true, lastReps: 10, plannedReps: 8 }))).toBe(true)
   })
 
   it('молчит, если уложились в план', () => {

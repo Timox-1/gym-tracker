@@ -18,7 +18,7 @@ describe('planBlocks', () => {
     expect(blocks.map(b => ({ title: b.title, kind: b.kind, id: b.id }))).toEqual([
       { title: 'Присед', kind: 'main', id: 'main' },
       {
-        title: 'Румынская тяга (BBB) + Разгибания ног',
+        title: 'Выпады назад с гантелями (на каждую ногу; вес одной гантели) + Сгибания ног в тренажёре',
         kind: 'work',
         id: 'g0',
       },
@@ -34,9 +34,9 @@ describe('planBlocks', () => {
     expect(plan.slice(main.start, main.end).every(s => s.exercise === 'squat')).toBe(true)
   })
 
-  it('BBB — десять сетов (5 пар)', () => {
-    const bbb = blocks.find(b => b.id === 'g0')!
-    expect(bbb.end - bbb.start).toBe(10)
+  it('выпады и сгибания — общий блок из трёх пар', () => {
+    const legs = blocks.find(b => b.id === 'g0')!
+    expect(legs.end - legs.start).toBe(6)
   })
 
   it('супerset подтягивания — все 5 подходов подтягиваний, включая лишние без пары', () => {

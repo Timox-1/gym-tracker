@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { getNextWorkout } from '@/lib/program/schedule'
 import {
   LIFTS, LIFT_LABELS, ACCESSORY_GROUPS, BBB_COMPANION, BBB_LIFT,
-  BBB_SETS, BBB_REPS, BBB_PCT, type Lift, type AnyLift,
+  BBB_SETS, BBB_REPS, BBB_PCT, RANGE_ACCESSORIES, type Lift, type AnyLift,
 } from '@/lib/program/constants'
 import { calcWeight, getMainSets } from '@/lib/program/calculator'
 import { updateAllTMs } from '@/app/actions/program'
@@ -117,7 +117,26 @@ export default async function ProgramPage() {
               </div>
             </div>
 
-            <div>
+            {lift === 'squat' ? (
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Ноги</p>
+                <div className="bg-gray-800 rounded-xl p-3 space-y-2 text-sm">
+                  <p className="text-gray-300">Выпады назад с гантелями · 3×8–10 на каждую ногу</p>
+                  <p className="text-gray-400">Записывай вес одной гантели</p>
+                  <p className="text-blue-400">↔ Сгибания ног в тренажёре · 3×8–10</p>
+                </div>
+              </div>
+            ) : lift === 'deadlift' ? (
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">BBB + шея</p>
+                <div className="bg-gray-800 rounded-xl p-3 space-y-2 text-sm">
+                  <p className="text-gray-300">Присед · 5×8 @ {bbbWeight} кг</p>
+                  <p className="text-blue-400">После 1-го и 3-го: боковые наклоны шеи · 15 на сторону</p>
+                  <p className="text-blue-400">После 2-го и 4-го: сгибание и разгибание шеи · 15 на направление</p>
+                  <p className="text-gray-400">Присед → шея без отдыха; после шеи отдых 120 сек. Пятый присед отдельно.</p>
+                </div>
+              </div>
+            ) : <div>
               <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">BBB + суперсет</p>
               <div className="bg-gray-800 rounded-xl p-3 space-y-2">
                 <div className="flex justify-between text-sm">
@@ -129,7 +148,7 @@ export default async function ProgramPage() {
                   <span className="text-gray-400">{BBB_SETS}×{companion.reps}</span>
                 </div>
               </div>
-            </div>
+            </div>}
 
             <div>
               <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Аксессуары</p>
@@ -139,17 +158,17 @@ export default async function ProgramPage() {
                     {group.type === 'solo' ? (
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-300">{group.item.name}</span>
-                        <span className="text-gray-400">{group.item.sets}×{group.item.reps}</span>
+                        <span className="text-gray-400">{group.item.sets}×{RANGE_ACCESSORIES.has(group.item.name) ? '8–10' : group.item.reps}</span>
                       </div>
                     ) : (
                       <div className="space-y-1">
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-300">{group.a.name}</span>
-                          <span className="text-gray-400">{group.a.sets}×{group.a.reps}</span>
+                          <span className="text-gray-400">{group.a.sets}×{RANGE_ACCESSORIES.has(group.a.name) ? '8–10' : group.a.reps}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-blue-400">↔ {group.b.name}</span>
-                          <span className="text-gray-400">{group.b.sets}×{group.b.reps}</span>
+                          <span className="text-gray-400">{group.b.sets}×{RANGE_ACCESSORIES.has(group.b.name) ? '8–10' : group.b.reps}</span>
                         </div>
                       </div>
                     )}

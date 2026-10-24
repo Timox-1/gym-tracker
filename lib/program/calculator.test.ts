@@ -64,7 +64,7 @@ describe('getBBBSets', () => {
     const sets = getBBBSets(82.5)
     expect(sets).toHaveLength(5)
     expect(sets[0].plannedWeight).toBe(42.5) // 41.25 → до ближайшего 42.5
-    expect(sets[0].plannedReps).toBe(10)
+    expect(sets[0].plannedReps).toBe(8)
   })
   it('BBB-присед на дне становой: 50% от TM приседа 97.5 → 50', () => {
     // раньше floor давал 47.5, а по факту всегда делалось 50

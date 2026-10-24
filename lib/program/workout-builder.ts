@@ -1,11 +1,13 @@
 import { getMainSets, getBBBSets } from './calculator'
-import { BBB_LIFT, BBB_COMPANION, ACCESSORY_GROUPS, LIFT_LABELS, type Lift, type AnyLift } from './constants'
+import { BBB_LIFT, BBB_COMPANION, ACCESSORY_GROUPS, LIFT_LABELS, RANGE_ACCESSORIES, type Lift, type AnyLift } from './constants'
 
 export type PlannedSet = {
   exercise: string
   exerciseLabel: string
   setNumber: number
   plannedReps: number
+  plannedRepsMax?: number
+  increaseReady?: boolean
   plannedWeight: number | null
   lastWeight: number | null
   lastReps: number | null
@@ -14,6 +16,7 @@ export type PlannedSet = {
   isBBB: boolean
   supersetGroupId: number | null
   supersetRole: 'a' | 'b' | null
+  restSeconds?: number
 }
 
 export function buildWorkoutPlan(
@@ -50,7 +53,30 @@ export function buildWorkoutPlan(
   const companion = BBB_COMPANION[dayType]
   let groupId = 0
 
-  getBBBSets(bbbTm).forEach((s, i) => {
+  if (dayType === 'squat') {
+    for (let i = 1; i <= 3; i++) {
+    for (const item of [
+      { name: 'Выпады назад с гантелями', label: 'Выпады назад с гантелями (на каждую ногу; вес одной гантели)', reps: 10, role: 'a' as const },
+      { name: 'Сгибания ног в тренажёре', label: 'Сгибания ног в тренажёре', reps: 12, role: 'b' as const },
+    ]) {
+        sets.push({
+          exercise: item.name,
+          exerciseLabel: item.label,
+          setNumber: i,
+          plannedReps: item.reps,
+          plannedWeight: null,
+          lastWeight: null,
+          lastReps: null,
+          isAmrap: false,
+          isAccessory: true,
+          isBBB: false,
+          supersetGroupId: groupId,
+          supersetRole: item.role,
+        })
+    }
+    }
+  } else {
+    getBBBSets(bbbTm).forEach((s, i) => {
     sets.push({
       exercise: bbbExercise,
       exerciseLabel: `${LIFT_LABELS[bbbLift]} (BBB)`,
@@ -62,14 +88,16 @@ export function buildWorkoutPlan(
       isAmrap: false,
       isAccessory: false,
       isBBB: true,
-      supersetGroupId: groupId,
-      supersetRole: 'a',
+      supersetGroupId: dayType === 'deadlift' && i === 4 ? null : groupId,
+      supersetRole: dayType === 'deadlift' && i === 4 ? null : 'a',
     })
+    if (dayType === 'deadlift' && i === 4) return
+    const neck = i % 2 === 0 ? 'Шея: боковые наклоны' : 'Шея: сгибание и разгибание'
     sets.push({
-      exercise: companion.name,
-      exerciseLabel: companion.name,
-      setNumber: i + 1,
-      plannedReps: companion.reps,
+      exercise: dayType === 'deadlift' ? neck : companion.name,
+      exerciseLabel: dayType === 'deadlift' ? `${neck} (15 на ${i % 2 === 0 ? 'сторону' : 'направление'})` : companion.name,
+      setNumber: dayType === 'deadlift' ? Math.floor(i / 2) + 1 : i + 1,
+      plannedReps: dayType === 'deadlift' ? 15 : companion.reps,
       plannedWeight: null,
       lastWeight: null,
       lastReps: null,
@@ -78,8 +106,10 @@ export function buildWorkoutPlan(
       isBBB: false,
       supersetGroupId: groupId,
       supersetRole: 'b',
+      ...(dayType === 'deadlift' ? { restSeconds: 120 } : {}),
     })
-  })
+    })
+  }
   groupId++
 
   // Accessories — interleave superset pairs
@@ -144,5 +174,11 @@ export function buildWorkoutPlan(
     }
   })
 
-  return sets
+  return sets.map(s => s.isAccessory && RANGE_ACCESSORIES.has(s.exercise)
+    ? { ...s, plannedReps: 8, plannedRepsMax: 10 }
+    : s)
+}
+
+export function formatPlannedReps(s: PlannedSet): string {
+  return `${s.plannedReps}${s.plannedRepsMax ? `–${s.plannedRepsMax}` : ''}`
 }

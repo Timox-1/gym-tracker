@@ -11,8 +11,9 @@ export type HistorySetRow = {
 export function pickLastExerciseData(
   rows: HistorySetRow[],
   exercises: string[],
-): Record<string, { weight: number; reps: number }> {
-  const result: Record<string, { weight: number; reps: number }> = {}
+  requirements?: Record<string, { sets: number; reps: number }>,
+): Record<string, { weight: number; reps: number; increaseReady?: boolean }> {
+  const result: Record<string, { weight: number; reps: number; increaseReady?: boolean }> = {}
 
   for (const exercise of exercises) {
     const forExercise = rows.filter(r => r.exercise === exercise)
@@ -35,6 +36,14 @@ export function pickLastExerciseData(
       setsFromSession.reduce((sum, s) => sum + s.actual_reps, 0) / setsFromSession.length,
     )
     result[exercise] = { weight: setsFromSession[0].actual_weight_kg, reps: avgReps }
+    const required = requirements?.[exercise]
+    if (required) {
+      result[exercise].increaseReady = setsFromSession.length === required.sets
+        && Array.from({ length: required.sets }, (_, i) => i + 1)
+          .every(n => setsFromSession.some(s => s.set_number === n))
+        && setsFromSession.every(s => s.actual_reps >= required.reps
+          && s.actual_weight_kg === setsFromSession[0].actual_weight_kg)
+    }
   }
 
   return result
